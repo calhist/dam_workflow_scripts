@@ -1,4 +1,4 @@
-## Workflow
+## Basic Workflow
 
 ### On Quarantine server (CHS-ISL002)
 
