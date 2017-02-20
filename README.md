@@ -4,7 +4,7 @@
 
 1. Upload assets to a folder on the quarantine server.  The folder should be a bag or a flat collection of assets.  The quarantine server handles virus checking.
 
-* http://chs.dgicloud.com:60080/owncloud/
+  http://chs.dgicloud.com:60080/owncloud/
 
 2. Create bags for each asset.
 
