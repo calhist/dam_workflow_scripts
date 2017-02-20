@@ -9,13 +9,13 @@
 2. Create bags for each asset.
 
   ~~~
-  chsadmin@CHS-ISL002:~$ create-bags.sh -i "folder name"
+  $ create-bags.sh -i "folder name"
   ~~~
 
 3. Copy the collection of bags to the production server.
 
   ~~~
-  chsadmin@CHS-ISL002:~$ copy-to-production.sh -i "folder name".bags
+  $ copy-to-production.sh -i "folder name".bags
   ~~~
 
 ### On Production server (CHS-ISL001)
@@ -23,5 +23,10 @@
 1. Create an ingest batch on the production server.
 
   ~~~
-  chsadmin@CHS-ISL001:~$ create-batch.sh -i "folder name".bags
+  $ create-batch.sh -i "folder name".bags
   ~~~
+
+2. Ingest the batch.
+
+  http://chs.dgicloud.com/islandora/
+  
