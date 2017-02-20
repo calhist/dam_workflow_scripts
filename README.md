@@ -8,18 +8,18 @@
 
 2. Create bags for each asset.
 
-~~~
-chsadmin@CHS-ISL002:~$ create-bags.sh -i "folder name"
-~~~
+  ~~~
+  chsadmin@CHS-ISL002:~$ create-bags.sh -i "folder name"
+  ~~~
 
 3. Copy the collection of bags to the production server.
 
-~~~
-chsadmin@CHS-ISL002:~$ copy-to-production.sh -i "folder name".bags
-~~~
+  ~~~
+  chsadmin@CHS-ISL002:~$ copy-to-production.sh -i "folder name".bags
+  ~~~
 
 4. Create an ingest batch on the production server.
 
-~~~
-chsadmin@CHS-ISL001:~$ create-batch.sh -i "folder name".bags
-~~~
+  ~~~
+  chsadmin@CHS-ISL001:~$ create-batch.sh -i "folder name".bags
+  ~~~
