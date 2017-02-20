@@ -1,6 +1,6 @@
-# Workflow
+## Workflow
 
-## On Quarantine server (CHS-ISL002)
+### On Quarantine server (CHS-ISL002)
 
 1. Upload assets to a folder on the quarantine server.  The folder should be a bag or a flat collection of assets.  The quarantine server handles virus checking.
 
@@ -18,7 +18,9 @@
   chsadmin@CHS-ISL002:~$ copy-to-production.sh -i "folder name".bags
   ~~~
 
-4. Create an ingest batch on the production server.
+### On Production server (CHS-ISL001)
+
+1. Create an ingest batch on the production server.
 
   ~~~
   chsadmin@CHS-ISL001:~$ create-batch.sh -i "folder name".bags
