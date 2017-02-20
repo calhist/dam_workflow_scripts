@@ -12,21 +12,39 @@
   $ create-bags.sh -i "folder name"
   ~~~
 
-3. Copy the collection of bags to the production server.
+3. Copy the collection of bags to the archive server.
+
+  ~~~
+  $ copy-to-archive.sh -i "folder name".bags
+  ~~~
+
+4. Copy the collection of bags to the production server.
 
   ~~~
   $ copy-to-production.sh -i "folder name".bags
   ~~~
 
+### On Archive server (CHS-ISL003)
+
+1. Validate bags on the archive server.  Validation includes checking that bags are well-formed and fixity is correct.
+
+  ~~~
+  $ validate-bags.sh -i "folder name".bags
+  ~~~
+  
 ### On Production server (CHS-ISL001)
 
-1. Create an ingest batch on the production server.
+1. Review bags on the production server.
+
+  http://chs.dgicloud.com/owncloud/
+
+2. Create an ingest batch from the bags on the production server.  Metadata is created if MODS file found in the bag.
 
   ~~~
-  $ create-batch.sh -i "folder name".bags
+  $ create-batch.sh -i "folder name".bags -c "collection name"
   ~~~
 
-2. Ingest the batch.
+3. Ingest the batch.
 
   http://chs.dgicloud.com/islandora/
   
