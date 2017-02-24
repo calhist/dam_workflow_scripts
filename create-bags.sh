@@ -101,6 +101,16 @@ if [ -f $input/bagit.txt ]; then
 			fi
 		fi
 	done
+
+	# CHECK
+	A=$(cat $input/manifest-md5.txt | wc -l)
+	B=$(ls $output | wc -l)
+
+	if [ $A -ne $B ]; then
+		printf "File count failed!\n"
+		exit
+	fi
+
 else
 	for i in $(find $input -type f); do
 		printf "%s\n" $i
