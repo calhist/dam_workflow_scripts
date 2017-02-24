@@ -1,67 +1,122 @@
 #!/bin/sh
 
-src=/data/staging/Maps
-mrc=/data/staging/marc
-dst=/data/staging/bags
+set -e
+
+USAGE="Usage: $(basename $0) -i <input directory> [-f]"
+
+input=
+output=
+force=0
+
+while getopts "i:f" opt; do
+	case $opt in
+	i)
+		input=$OPTARG
+		;;
+	f)
+		force=1
+		;;
+ 	\?)
+		echo ${USAGE}
+		exit 1
+	esac
+done
+
+if [ "${input}" == '' ]; then
+	echo ${USAGE}
+	exit 1
+fi
+
+if [ ! -d ${input} ]; then
+	echo "${input}: not a directory."
+	exit 1
+fi
+
+input=$(cd ${input}; pwd) # convert to absolute path
+
+output=${input}.bags
+
+if [ -d $output ]; then
+	if [ $force -eq 1 ]; then
+		rm -rf $output
+	else
+		echo "${output}: directory already exists."
+		exit 1
+	fi
+fi
+
+# https://github.com/LibraryOfCongress/bagit-python
+
 bagit=/usr/local/bin/bagit.py
+
+if [ ! -x ${bagit} ]; then
+	echo "${bagit}: not found."
+	exit 1
+fi
+
+# https://github.com/harvard-lts/fits/tree/master
+
 fits=/opt/fits/fits.sh
 
-restrictionOnAccess="http://rightsstatements.org/vocab/NKC/1.0/"
-useAndReproduction="All requests to reproduce, publish, quote from or otherwise use collection materials must be submitted in writing to the Director of Library and Archives, North Baker Research Library, California Historical Society, 678 Mission Street, San Francisco, CA 94105. Consent is given on behalf of the California Historical Society as the owner of the physical items and is not intended to include or imply permission from the copyright owner. Such permission must be obtained from the copyright owner. Restrictions also apply to digital representations of the original materials. Use of digital files is restricted to research and educational purposes."
+if [ ! -x ${fits} ]; then
+	echo "${fits}: not found."
+	exit 1
+fi
 
-for i in $(ls $src/*.tif); do
-  tif=$(basename $i)
-  bag=$(basename $i .tif)
-  xml=$bag.xml
+if [ -f $input/bagit.txt ]; then
+	$bagit --validate --quiet $input
 
-  printf "%s\n" $bag
+	if [ $? -ne 0 ]; then
+		echo "${input}: invalid bag."
+		exit
+	fi
 
-  [ -d $dst/$bag ] && rm -rf $dst/$bag
+	for i in $(find $input/data -type f); do
+		printf "%s\n" $i
 
-  mkdir $dst/$bag
+		file=$(basename $i)
 
-  # TIFF
-  cp $src/$tif $dst/$bag
-  $fits -xc -i $dst/$bag -o $dst/$bag
+		bag=$(basename ${i%.*})
 
-  # MARC
-  xmlstarlet val --net -e $mrc/$xml || exit
-  xmlstarlet fo $mrc/$xml > $dst/$bag/$xml
+		[ -d $output/$bag ] && rm -rf $output/$bag
 
-  xmlstarlet ed -L \
-    -s /marc:collection/marc:record -t elem -n marc:datafieldTMP -v '' \
-    $dst/$bag/$xml
-  xmlstarlet ed -L \
-    -i //marc:datafieldTMP -t attr -n tag -v 506 \
-    -i //marc:datafieldTMP -t attr -n ind1 -v ' ' \
-    -i //marc:datafieldTMP -t attr -n ind2 -v ' ' \
-    -s //marc:datafieldTMP -t elem -n marc:subfield -v "${restrictionOnAccess}" \
-    -i '$prev' -t attr -n code -v 'a' \
-    -r //marc:datafieldTMP -v datafield \
-    $dst/$bag/$xml
-  xmlstarlet ed -L \
-    -s /marc:collection/marc:record -t elem -n marc:datafieldTMP -v '' \
-    $dst/$bag/$xml
-  xmlstarlet ed -L \
-    -i //marc:datafieldTMP -t attr -n tag -v 540 \
-    -i //marc:datafieldTMP -t attr -n ind1 -v ' ' \
-    -i //marc:datafieldTMP -t attr -n ind2 -v ' ' \
-    -s //marc:datafieldTMP -t elem -n marc:subfield -v "${useAndReproduction}" \
-    -i '$prev' -t attr -n code -v 'a' \
-    -r //marc:datafieldTMP -v datafield \
-    $dst/$bag/$xml
+		mkdir -p $output/$bag
 
-  # BAGIT
-  $bagit --md5 --sha256 --quiet --log=/dev/null $dst/$bag
+		cp $input/data/$file $output/$bag/$file
 
-  # CHECK
-  n=data/$tif
+		$fits -xc -i $output/$bag -o $output/$bag 2>/dev/null
 
-  src_md5=$(awk -v RS='\r\n' '$2 == n {print $1}' n=$n $src/manifest-md5.txt)
-  dst_md5=$(awk              '$2 == n {print $1}' n=$n $dst/$bag//manifest-md5.txt)
+		$bagit --md5 --sha256 --log=/dev/null $output/$bag
 
-  if [ $src_md5 != $dst_md5 ]; then
-    printf "MD5 match failed!\n"
-    exit
-  fi
-done
+		# CHECK
+		if [ -f $input/manifest-md5.txt ]; then
+			n=data/$file
+
+			A=$(awk '$2 == n {print $1}' n=$n $input/manifest-md5.txt)
+			B=$(awk '$2 == n {print $1}' n=$n $output/$bag/manifest-md5.txt)
+
+			if [ "$A" != "$B" ]; then
+				printf "MD5 match failed!\n"
+				exit
+			fi
+		fi
+	done
+else
+	for i in $(find $input -type f); do
+		printf "%s\n" $i
+
+		file=$(basename $i)
+
+		bag=$(basename ${i%.*})
+
+		[ -d $output/$bag ] && rm -rf $output/$bag
+
+		mkdir -p $output/$bag
+
+		cp $input/$file $output/$bag/$file
+
+		$fits -xc -i $output/$bag -o $output/$bag 2>/dev/null
+
+		$bagit --md5 --sha256 --log=/dev/null $output/$bag
+	done
+fi
