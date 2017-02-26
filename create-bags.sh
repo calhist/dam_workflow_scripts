@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 USAGE="Usage: $(basename $0) -i <input directory> [-f]"
 
 input=
