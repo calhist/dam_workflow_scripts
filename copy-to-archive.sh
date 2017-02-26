@@ -1,30 +1,68 @@
-#!/bin/sh
+#!/bin/bash
 
-src=/data/staging/Maps
-dst=/data/staging/bags
-bagit=/usr/local/bin/bagit.py
-fits=/opt/fits/fits.sh
+USAGE="Usage: $(basename $0) -i <input directory>"
 
-for i in $(ls $src/*.tif); do
-  tif=$(basename $i)
-  bag=$(basename $i .tif)
+#archive=chsadmin@74.115.17.33:60222
+archive=chs3
 
-  printf "%-40s %s\n" $tif $bag
+input=
+output=
 
-  [ -d $dst/$bag ] && rm -rf $dst/$bag
-
-  mkdir $dst/$bag
-  cp $src/$tif $dst/$bag
-  $fits -xc -i $dst/$bag -o $dst/$bag
-  $bagit --md5 --sha256 --quiet --log=/dev/null $dst/$bag
-
-  n=data/$tif
-
-  src_md5=$(awk -v RS='\r\n' '$2 == n {print $1}' n=$n $src/manifest-md5.txt)
-  dst_md5=$(awk              '$2 == n {print $1}' n=$n $dst/$bag//manifest-md5.txt)
-
-  if [ $src_md5 != $dst_md5 ]; then
-    printf "MD5 match failed!\n"
-    exit
-  fi
+while getopts "i:" opt; do
+	case $opt in
+        i)
+                input=$OPTARG
+                ;;
+        \?)
+                echo ${USAGE}
+                exit 1
+        esac
 done
+
+if [ "${input}" == '' ]; then
+        echo ${USAGE}
+        exit 1
+fi
+
+if [ ! -d ${input} ]; then
+        echo "${input}: not a directory."
+        exit 1
+fi
+
+input=$(cd ${input}; pwd) # convert to absolute path
+output=$(basename $input)
+
+if [ ${input: -5} != ".bags" ]; then
+        echo "${input}: not a directory ending with '.bags'."
+        exit 1
+fi
+
+ssh $archive "[ -d /data/$output ]"
+
+if [ $? -eq 0 ]; then
+	echo "${archive}:/data/${output}: already exists."
+	exit 1
+fi
+
+# https://github.com/LibraryOfCongress/bagit-python
+
+bagit=/usr/local/bin/bagit.py
+
+if [ ! -x ${bagit} ]; then
+        echo "${bagit}: not found."
+        exit 1
+fi
+
+for i in $(ls $input); do
+	$bagit --validate $input/$i
+
+	if [ $? -ne 0 ]; then
+		echo
+		echo "Input directory must a directory of valid bags."
+		exit 1
+	fi
+done
+
+echo
+
+echo rsync -nav $input/ $archive:/data/$output/
