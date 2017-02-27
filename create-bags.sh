@@ -20,6 +20,11 @@ while getopts "i:f" opt; do
 	esac
 done
 
+if [ "$USER" != 'www-data' ]; then
+	echo "Must be run as www-data."
+	exit 1
+fi
+
 if [ "${input}" == '' ]; then
 	echo ${USAGE}
 	exit 1
