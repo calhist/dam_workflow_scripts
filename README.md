@@ -48,3 +48,12 @@
 
   http://chs.dgicloud.com/islandora/
   
+### On Archive server (CHS-ISL003)
+
+Use the '-c' option to validate bags periodically.  For example, to validate bags older than 30 days at 4:00 AM everyday add this line to /etc/cron.d/validate.
+
+~~~
+0 4 * * * www-data /home/ubuntu/dam_workflow_scripts/validate.sh -i /data/quarantine -6 +30
+~~~
+
+Run as the user 'www-data' when using the '-c' option.
