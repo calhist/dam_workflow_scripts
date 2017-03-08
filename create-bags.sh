@@ -20,10 +20,10 @@ while getopts "i:f" opt; do
 	esac
 done
 
-if [ "$USER" != 'www-data' ]; then
-	echo "Must be run as www-data."
-	exit 1
-fi
+#if [ "$USER" != 'www-data' ]; then
+#	echo "Must be run as www-data."
+#	exit 1
+#fi
 
 if [ "${input}" == '' ]; then
 	echo ${USAGE}
@@ -66,8 +66,17 @@ if [ ! -x ${fits} ]; then
 	exit 1
 fi
 
+# http://xmlstar.sourceforge.net/docs.php
+
+xml=/usr/bin/xmlstarlet
+
+if [ ! -x ${xml} ]; then
+	echo "${xml}: not found."
+	exit 1
+fi
+
 if [ -f $input/bagit.txt ]; then
-	$bagit --validate --quiet $input
+	$bagit --validate $input
 
 	if [ $? -ne 0 ]; then
 		echo "${input}: invalid bag."
@@ -88,6 +97,16 @@ if [ -f $input/bagit.txt ]; then
 		cp $input/data/$file $output/$bag/$file
 
 		$fits -xc -i $output/$bag -o $output/$bag 2>/dev/null
+
+		if [ -d ${input}.MODS ]; then
+			$xml val -w ${input}.MODS/$bag.xml
+
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+
+			cp ${input}.MODS/$bag.xml $output/$bag/MODS.xml
+		fi
 
 		$bagit --md5 --sha256 --log=/dev/null $output/$bag
 
@@ -129,6 +148,16 @@ else
 		cp $input/$file $output/$bag/$file
 
 		$fits -xc -i $output/$bag -o $output/$bag 2>/dev/null
+
+		if [ -d ${input}.MODS ]; then
+			$xml val -w ${input}.MODS/$bag.xml
+
+			if [ $? -ne 0 ]; then
+				exit 1
+			fi
+
+			cp ${input}.MODS/$bag.xml $output/$bag/MODS.xml
+		fi
 
 		$bagit --md5 --sha256 --log=/dev/null $output/$bag
 	done
