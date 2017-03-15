@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# restore drupal archive locally
-
 USAGE="Usage: drupal7-restore <archive files or blank for list>"
 
 if [ "Xubuntu" != "X${LOGNAME}" ]; then
