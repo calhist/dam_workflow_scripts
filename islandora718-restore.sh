@@ -63,7 +63,7 @@ fi
 # Fedora
 #
 
-fedora_upgrade=1
+fedora_upgrade=0
 
 if [ $fedora_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
@@ -71,7 +71,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 		exit
 	fi
 
-	sudo service tomcat7 stop
+	sudo systemctl stop tomcat7
 
 	echo restoring s3://${backups}/${backup}/fedora-data
 
@@ -110,7 +110,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 
 	rm rebuild
 
-	sudo service tomcat7 start
+	sudo systemctl start tomcat7
 
 	sleep 30
 fi
@@ -138,7 +138,7 @@ fi
 # Drupal
 #
 
-drush=/home/ubuntu/.composer/vendor/bin/drush
+drush=/home/ubuntu/.config/composer/vendor/bin/drush
 
 if [ ! -x ${drush} ]; then
 	echo "drush is missing"
@@ -147,7 +147,7 @@ fi
 
 ${drush} pm-list --format=list|sort > /tmp/installed-modules.txt
 
-sudo service apache2 stop
+sudo systemctl stop apache2
 
 docroot=/var/www/html
 
@@ -173,21 +173,26 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 
 	sudo chown ubuntu:www-data ${docroot}/sites/default/settings.php
 
-	for i in `cat /tmp/enabled-modules.txt`; do
-		echo $i
+	enabled=`cat /tmp/enabled-modules.txt`
+
+	excludes="google_fonts_api admin_menu_toolbar date_api date_views platform_content_types platform_main_feature fe_block"
+	excludes=""
+
+	for exclude in excludes; do
+		enabled=`echo $enabled | sed "s/\b$exclude\b//g"`
+	done
+
+	for i in $enabled; do
+		echo Checking - $i
 		grep "^$i$" /tmp/installed-modules.txt > /dev/null
 		if [ $? -ne 0 ]; then
-			if [ "$i" = 'entity_token' ]; then
-				echo "Skipping entity_token, part of entity module"
-			else
-				${drush} dl $i
-			fi
+			${drush} -y dl $i
 		fi
 	done
 
-	${drush} sql-cli < /tmp/${backup}/DRUPAL7.sql
+#	${drush} sql-cli < /tmp/${backup}/DRUPAL7.sql
 
-	${drush} -y updb
+#	${drush} -y updb
 
 	cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
 	${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
@@ -199,7 +204,7 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 	fi
 fi
 
-sudo service apache2 start
+sudo systemctl start apache2
 
 sleep 10
 
