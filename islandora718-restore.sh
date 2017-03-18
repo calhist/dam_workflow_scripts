@@ -138,6 +138,12 @@ fi
 # Drupal
 #
 
+source_db=drupal7.sql
+
+custom_modules='platform_content_types platform_main_feature dgi_ondemand islandora_accordion_rotator_module'
+
+custom_themes='chs_theme'
+
 drush=/home/ubuntu/.config/composer/vendor/bin/drush
 
 if [ ! -x ${drush} ]; then
@@ -164,35 +170,58 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 	tar xzf /tmp/${backup}.tar.gz -C /tmp/${backup}
 	rm /tmp/${backup}.tar.gz
 
+	for i in $custom_modules; do
+		sudo rsync -a --delete \
+			/tmp/${backup}/drupal7/sites/all/modules/$i/ \
+			            ${docroot}/sites/all/modules/$i/
+
+		find ${docroot}/sites/all/modules/$i -type f -exec chmod 644 {} \;
+		find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
+	done
+
+	for i in $custom_themes; do
+		sudo rsync -a --delete \
+			/tmp/${backup}/drupal7/sites/all/themes/$i/ \
+			            ${docroot}/sites/all/themes/$i/
+
+		find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
+		find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
+	done
+
 	sudo chown -R ubuntu:ubuntu ${docroot}
 
 	sudo rsync -a --delete \
-		/tmp/${backup}/drupal7/sites/default/files/ ${docroot}/sites/default/files/
+		/tmp/${backup}/drupal7/sites/default/files/ \
+		            ${docroot}/sites/default/files/
 
 	sudo chown -R ubuntu:www-data ${docroot}/sites/default/files
 
-	sudo chown ubuntu:www-data ${docroot}/sites/default/settings.php
+	sudo chown    ubuntu:www-data ${docroot}/sites/default/settings.php
 
 	enabled=`cat /tmp/enabled-modules.txt`
 
-	excludes="google_fonts_api admin_menu_toolbar date_api date_views platform_content_types platform_main_feature fe_block"
-	excludes=""
-
-	for exclude in excludes; do
-		enabled=`echo $enabled | sed "s/\b$exclude\b//g"`
-	done
-
 	for i in $enabled; do
-		echo Checking - $i
+#		echo Checking - $i
 		grep "^$i$" /tmp/installed-modules.txt > /dev/null
 		if [ $? -ne 0 ]; then
 			${drush} -y dl $i
 		fi
 	done
 
-#	${drush} sql-cli < /tmp/${backup}/DRUPAL7.sql
+	${drush} -y sql-cli < /tmp/${backup}/${source_db}
 
-#	${drush} -y updb
+	# TODO: need to add memcache
+	${drush} -y dis memcache_admin memcache 
+	# TODO: need to work on building zorba
+	${drush} -y dis islandora_xquery
+	# I like this module
+	${drush} -y en module_filter
+	# Fix
+	${drush} -y vset islandora_base_url http://localhost:8080/fedora
+
+	${drush} -y updb
+	${drush} -y cache-clear all
+	${drush} -y watchdog-delete all
 
 	cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
 	${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
@@ -200,12 +229,10 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 
 	if [ $? -ne 0 ]; then
 		echo "Failed to synchronize modules"
-		exit
+#		exit
 	fi
 fi
 
 sudo systemctl start apache2
-
-sleep 10
 
 touch -c -t `date +"%Y%m010000.00"` $0
