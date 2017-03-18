@@ -2,12 +2,7 @@
 
 USAGE="Usage: islandora715-upgrade <archive files or blank for list>"
 
-if [ "Xubuntu" != "X${LOGNAME}" ]; then
-	echo "Must be run as user 'ubuntu'."
-	exit
-fi
-
-aws=/usr/local/bin/aws
+aws=/usr/bin/aws
 
 if [ ! -x ${aws} ]; then
 	echo "aws is missing"
@@ -25,25 +20,16 @@ rsync="rsync -a --delete"
 
 host=`hostname|cut -d. -f1`
 
-echo ${host} | grep -E '^[a-z][a-z0-9-]+$' > /dev/null
+echo ${host} | grep -E '^[a-zA-Z][a-zA-Z0-9-]+$' > /dev/null
 
 if [ $? -ne 0 ]; then
 	echo "invalid host: ${host}"
 	exit
 fi
 
-domain=`hostname|cut -d. -f2-`
-
-echo ${domain} | grep -E '^[a-z]+\.utexas\.edu$' > /dev/null
-
-if [ $? -ne 0 ]; then
-	echo "invalid domain: ${domain}"
-	exit
-fi
-
 date=`date +"%Y-%m-%d"`
 
-backups=lib-itas-backups/islandora
+backups=chs-backups
 
 if [ ! -d /usr/local/fedora ]; then
 	echo "fedora home is missing"
