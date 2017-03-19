@@ -143,7 +143,7 @@ fi
 # Drupal
 #
 
-drupal_upgrade=1
+drupal_upgrade=0
 
 if [ $drupal_upgrade -eq 1 ]; then
 	source_db=drupal7.sql
