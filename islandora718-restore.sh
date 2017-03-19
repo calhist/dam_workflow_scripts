@@ -212,8 +212,8 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 	${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
 	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
 	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
-	sed -i '/^memcache_admin$/d' /tmp/enabled-modules.txt
-	sed -i '/^memcache$/d'       /tmp/enabled-modules.txt
+	sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
+	sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
 	echo
 
 	cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
@@ -226,10 +226,10 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 		exit
 	fi
 
-	${drush} -y cache-clear all
+#	${drush} -y cache-clear all
+	${drush} -y up --no-core
 	echo
 
-	# Fix
 	${drush} -y vset islandora_base_url http://localhost:8080/fedora
 	echo
 
