@@ -227,7 +227,7 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 	fi
 
 #	${drush} -y cache-clear all
-	${drush} -y up --no-core
+	${drush} -y up
 	echo
 
 	${drush} -y vset islandora_base_url http://localhost:8080/fedora
