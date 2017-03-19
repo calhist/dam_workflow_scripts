@@ -1,11 +1,18 @@
 #!/bin/bash
 
-USAGE="Usage: islandora715-upgrade <archive files or blank for list>"
+USAGE="Usage: $(basename $0) <backup files or blank for list>"
 
 aws=/usr/bin/aws
 
 if [ ! -x ${aws} ]; then
 	echo "aws is missing"
+	exit
+fi
+
+drush=/home/ubuntu/.config/composer/vendor/bin/drush
+
+if [ ! -x ${drush} ]; then
+	echo "drush is missing"
 	exit
 fi
 
@@ -18,23 +25,7 @@ fi
 
 rsync="rsync -a --delete"
 
-host=`hostname|cut -d. -f1`
-
-echo ${host} | grep -E '^[a-zA-Z][a-zA-Z0-9-]+$' > /dev/null
-
-if [ $? -ne 0 ]; then
-	echo "invalid host: ${host}"
-	exit
-fi
-
-date=`date +"%Y-%m-%d"`
-
 backups=chs-backups
-
-if [ ! -d /usr/local/fedora ]; then
-	echo "fedora home is missing"
-	exit
-fi
 
 if [ $# -eq 0 ]; then
 	printf "\n"
@@ -63,7 +54,7 @@ fi
 # Fedora
 #
 
-fedora_upgrade=0
+fedora_upgrade=1
 
 if [ $fedora_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
@@ -78,7 +69,6 @@ if [ $fedora_upgrade -eq 1 ]; then
 	sudo chown -R ubuntu:ubuntu /usr/local/fedora/data
 
 	${aws} s3 \
-		--quiet \
 		sync s3://${backups}/${backup}/fedora-data/ /usr/local/fedora/data/ \
 		--delete
 
@@ -95,31 +85,33 @@ if [ $fedora_upgrade -eq 1 ]; then
 	echo 'send "1\r"'                                           >> rebuild
 	echo 'expect "Start rebuilding?*Enter (1-2) -->"'           >> rebuild
 	echo 'send "1\r"'                                           >> rebuild
-	echo 'interact'                                             >> rebuild
+	echo 'expect "objects rebuilt.*Finished."'                  >> rebuild
+#	echo 'interact'                                             >> rebuild
 
-	sudo -E -u tomcat7 expect rebuild
+	sudo -E -u tomcat7 expect rebuild | grep -v "Adding object "
+	echo
 
 	echo 'spawn /usr/local/fedora/server/bin/fedora-rebuild.sh'  > rebuild
 	echo 'expect "What do you want to do?*Enter (1-3) -->"'     >> rebuild
 	echo 'send "2\r"'                                           >> rebuild
 	echo 'expect "Start rebuilding?*Enter (1-2) -->"'           >> rebuild
 	echo 'send "1\r"'                                           >> rebuild
-	echo 'interact'                                             >> rebuild
+	echo 'expect "objects rebuilt.*Finished."'                  >> rebuild
+#	echo 'interact'                                             >> rebuild
 
-	sudo -E -u tomcat7 expect rebuild
+	sudo -E -u tomcat7 expect rebuild | grep -v "Adding object "
+	echo
 
 	rm rebuild
 
 	sudo systemctl start tomcat7
-
-	sleep 30
 fi
 
 #
 # Solr
 #
 
-solr_upgrade=0
+solr_upgrade=1
 
 if [ $solr_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/solr/collection1 ]; then
@@ -138,106 +130,99 @@ fi
 # Drupal
 #
 
-source_db=drupal7.sql
+drupal_upgrade=0
 
-custom_modules='platform_content_types platform_main_feature dgi_ondemand islandora_accordion_rotator_module'
+if [ $drupal_upgrade -eq 1 ]; then
+	source_db=drupal7.sql
 
-custom_themes='chs_theme'
+	custom_modules='platform_content_types platform_main_feature dgi_ondemand islandora_accordion_rotator_module'
 
-drush=/home/ubuntu/.config/composer/vendor/bin/drush
+	custom_themes='chs_theme'
 
-if [ ! -x ${drush} ]; then
-	echo "drush is missing"
-	exit
-fi
+	${drush} pm-list --format=list|sort > /tmp/installed-modules.txt
 
-${drush} pm-list --format=list|sort > /tmp/installed-modules.txt
+	sudo systemctl stop apache2
 
-sudo systemctl stop apache2
+	docroot=/var/www/html
 
-docroot=/var/www/html
+	[ -f /tmp/${backup}.tar.gz ] && rm     /tmp/${backup}.tar.gz
 
-[ -f /tmp/${backup}.tar.gz ] && rm     /tmp/${backup}.tar.gz
+	[ -d /tmp/${backup}        ] && rm -rf /tmp/${backup}
 
-[ -d /tmp/${backup}        ] && rm -rf /tmp/${backup}
+	${aws} s3 cp s3://${backups}/${backup}/enabled-modules.txt /tmp/enabled-modules.txt
 
-${aws} s3 cp s3://${backups}/${backup}/enabled-modules.txt /tmp/enabled-modules.txt
+	${aws} s3 cp s3://${backups}/${backup}/${backup}.tar.gz /tmp/${backup}.tar.gz 
 
-${aws} s3 cp s3://${backups}/${backup}/${backup}.tar.gz /tmp/${backup}.tar.gz 
+	if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
+		mkdir /tmp/${backup}
+		tar xzf /tmp/${backup}.tar.gz -C /tmp/${backup}
+		rm /tmp/${backup}.tar.gz
 
-if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
-	mkdir /tmp/${backup}
-	tar xzf /tmp/${backup}.tar.gz -C /tmp/${backup}
-	rm /tmp/${backup}.tar.gz
+		for i in $custom_modules; do
+			sudo rsync -a --delete \
+				/tmp/${backup}/drupal7/sites/all/modules/$i/ \
+				            ${docroot}/sites/all/modules/$i/
 
-	for i in $custom_modules; do
+			find ${docroot}/sites/all/modules/$i -type f -exec chmod 644 {} \;
+			find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
+		done
+
+		for i in $custom_themes; do
+			sudo rsync -a --delete \
+				/tmp/${backup}/drupal7/sites/all/themes/$i/ \
+				            ${docroot}/sites/all/themes/$i/
+
+			find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
+			find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
+		done
+
+		sudo chown -R ubuntu:ubuntu ${docroot}
+
 		sudo rsync -a --delete \
-			/tmp/${backup}/drupal7/sites/all/modules/$i/ \
-			            ${docroot}/sites/all/modules/$i/
+			/tmp/${backup}/drupal7/sites/default/files/ \
+			            ${docroot}/sites/default/files/
 
-		find ${docroot}/sites/all/modules/$i -type f -exec chmod 644 {} \;
-		find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
-	done
+		sudo chown -R ubuntu:www-data ${docroot}/sites/default/files
 
-	for i in $custom_themes; do
-		sudo rsync -a --delete \
-			/tmp/${backup}/drupal7/sites/all/themes/$i/ \
-			            ${docroot}/sites/all/themes/$i/
+		sudo chown    ubuntu:www-data ${docroot}/sites/default/settings.php
 
-		find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
-		find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
-	done
+		enabled=`cat /tmp/enabled-modules.txt`
 
-	sudo chown -R ubuntu:ubuntu ${docroot}
+		for i in $enabled; do
+			grep "^$i$" /tmp/installed-modules.txt > /dev/null
+			if [ $? -ne 0 ]; then
+				${drush} -y dl $i
+				echo
+			fi
+		done
 
-	sudo rsync -a --delete \
-		/tmp/${backup}/drupal7/sites/default/files/ \
-		            ${docroot}/sites/default/files/
+		${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
+		${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
+		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
+		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
+		sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
+		sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
+		echo
 
-	sudo chown -R ubuntu:www-data ${docroot}/sites/default/files
+		cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
+		${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
+		echo
 
-	sudo chown    ubuntu:www-data ${docroot}/sites/default/settings.php
-
-	enabled=`cat /tmp/enabled-modules.txt`
-
-	for i in $enabled; do
-		grep "^$i$" /tmp/installed-modules.txt > /dev/null
+		diff /tmp/a.txt /tmp/b.txt
 		if [ $? -ne 0 ]; then
-			${drush} -y dl $i
-			echo
+			echo "Failed to synchronize modules"
+			exit
 		fi
-	done
 
-	${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
-	${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
-	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
-	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
-	sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
-	sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
-	echo
+		${drush} -y up
+		echo
 
-	cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
-	${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
-	echo
+		${drush} -y vset islandora_base_url http://localhost:8080/fedora
+		echo
 
-	diff /tmp/a.txt /tmp/b.txt
-	if [ $? -ne 0 ]; then
-		echo "Failed to synchronize modules"
-		exit
+		${drush} -y en module_filter
+		echo
 	fi
 
-#	${drush} -y cache-clear all
-	${drush} -y up
-	echo
-
-	${drush} -y vset islandora_base_url http://localhost:8080/fedora
-	echo
-
-	# I like this module
-	${drush} -y en module_filter
-	echo
+	sudo systemctl start apache2
 fi
-
-sudo systemctl start apache2
-
-touch -c -t `date +"%Y%m010000.00"` $0
