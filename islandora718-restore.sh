@@ -54,7 +54,7 @@ fi
 # Fedora
 #
 
-fedora_upgrade=1
+fedora_upgrade=0
 
 if [ $fedora_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
@@ -105,6 +105,9 @@ if [ $fedora_upgrade -eq 1 ]; then
 	rm rebuild
 
 	sudo systemctl start tomcat7
+
+	echo Sleeping ...
+	sleep 60
 fi
 
 #
@@ -119,18 +122,28 @@ if [ $solr_upgrade -eq 1 ]; then
 		exit
 	fi
 
-	[ -d /tmp/solr ] && rm -rf /tmp/solr
+	sudo systemctl stop tomcat7
 
-	${aws} s3 \
-		--quiet \
-		sync s3://${backups}/${backup}/solr/ /tmp/solr/
+	echo Stopping tomcat7
+	sleep 30
+
+	if [ -d /usr/local/solr/collection1/data ]; then
+		sudo rm -rf /usr/local/solr/collection1/data/*
+	fi
+
+	sudo systemctl start tomcat7
+
+	echo Starting tomcat7
+	sleep 60
+
+	./islandora718-reindex.php
 fi
 
 #
 # Drupal
 #
 
-drupal_upgrade=0
+drupal_upgrade=1
 
 if [ $drupal_upgrade -eq 1 ]; then
 	source_db=drupal7.sql
