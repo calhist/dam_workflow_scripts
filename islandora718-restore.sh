@@ -114,7 +114,7 @@ fi
 # Solr
 #
 
-solr_upgrade=1
+solr_upgrade=0
 
 if [ $solr_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/solr/collection1 ]; then
@@ -226,6 +226,9 @@ if [ $drupal_upgrade -eq 1 ]; then
 			echo "Failed to synchronize modules"
 			exit
 		fi
+
+		${drush} -y en git_deploy
+		echo
 
 		${drush} -y up
 		echo
