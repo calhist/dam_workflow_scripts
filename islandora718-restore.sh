@@ -201,36 +201,41 @@ if [ -f /tmp/${backup}.tar.gz -a -f /tmp/enabled-modules.txt ]; then
 	enabled=`cat /tmp/enabled-modules.txt`
 
 	for i in $enabled; do
-#		echo Checking - $i
 		grep "^$i$" /tmp/installed-modules.txt > /dev/null
 		if [ $? -ne 0 ]; then
 			${drush} -y dl $i
+			echo
 		fi
 	done
 
-	${drush} -y sql-cli < /tmp/${backup}/${source_db}
-
-	# TODO: need to add memcache
-	${drush} -y dis memcache_admin memcache 
-	# TODO: need to work on building zorba
-	${drush} -y dis islandora_xquery
-	# I like this module
-	${drush} -y en module_filter
-	# Fix
-	${drush} -y vset islandora_base_url http://localhost:8080/fedora
-
-	${drush} -y updb
-	${drush} -y cache-clear all
-	${drush} -y watchdog-delete all
+	${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
+	${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
+	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
+	${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
+	sed -i '/^memcache_admin$/d' /tmp/enabled-modules.txt
+	sed -i '/^memcache$/d'       /tmp/enabled-modules.txt
+	echo
 
 	cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
 	${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
-	diff /tmp/a.txt /tmp/b.txt
+	echo
 
+	diff /tmp/a.txt /tmp/b.txt
 	if [ $? -ne 0 ]; then
 		echo "Failed to synchronize modules"
-#		exit
+		exit
 	fi
+
+	${drush} -y cache-clear all
+	echo
+
+	# Fix
+	${drush} -y vset islandora_base_url http://localhost:8080/fedora
+	echo
+
+	# I like this module
+	${drush} -y en module_filter
+	echo
 fi
 
 sudo systemctl start apache2
