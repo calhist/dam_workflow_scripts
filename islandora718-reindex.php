@@ -18,9 +18,11 @@ $query = '
 $connection = new RepositoryConnection();
 $repository = new FedoraRepository(new FedoraApi($connection), new SimpleCache());
 
+$users = simplexml_load_file('/usr/local/fedora/server/config/fedora-users.xml');
+
 $curl = new CurlConnection();
 $curl->username = 'fgsAdmin';
-$curl->password = '';
+$curl->password = $users->xpath('/users/user[@name="fgsAdmin"]/@password')[0];
 
 $objects = $repository->ri->sparqlQuery($query, -1);
 
