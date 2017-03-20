@@ -65,4 +65,4 @@ done
 
 echo
 
-echo rsync -nav $input/ $archive:/data/$output/
+rsync -av $input/ $archive:/data/$output/
