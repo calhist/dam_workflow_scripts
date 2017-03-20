@@ -68,7 +68,7 @@
   total size is 69,835  speedup is 0.98
   ~~~
   
-4. Copy the collection of bags to the production server.
+4. [NOT READY] Copy the collection of bags to the production server.
 
   ~~~
   $ copy-to-production.sh -i "folder name".bags
@@ -80,6 +80,13 @@
 
   ~~~
   $ validate-bags.sh -i "folder name".bags
+  ~~~
+
+  Example 1: sample_1_source.bags
+  
+  ~~~
+  $ cd /data
+  $ validate-bags.sh -i sample_1_source.bags
   ~~~
   
 ### On Production server (CHS-ISL001)
