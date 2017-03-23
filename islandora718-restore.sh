@@ -152,6 +152,10 @@ if [ $drupal_upgrade -eq 1 ]; then
 
 	custom_themes='chs_theme'
 
+	if [ -f /etc/vsftpd.conf ]; then
+		sudo chown -R ubuntu:ubuntu /var/www/html/sites
+	fi
+
 	${drush} pm-list --format=list|sort > /tmp/installed-modules.txt
 
 	sudo systemctl stop apache2
@@ -180,14 +184,18 @@ if [ $drupal_upgrade -eq 1 ]; then
 			find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
 		done
 
-		for i in $custom_themes; do
-			sudo rsync -a --delete \
-				/tmp/${backup}/drupal7/sites/all/themes/$i/ \
-				            ${docroot}/sites/all/themes/$i/
+#		for i in $custom_themes; do
+#			sudo rsync -a --delete \
+#				/tmp/${backup}/drupal7/sites/all/themes/$i/ \
+#				            ${docroot}/sites/all/themes/$i/
+#
+#			find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
+#			find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
+#		done
 
-			find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
-			find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
-		done
+		sudo rsync -a --delete \
+			/tmp/${backup}/drupal7/sites/all/themes/ \
+			            ${docroot}/sites/all/themes/
 
 		sudo chown -R ubuntu:ubuntu ${docroot}
 
@@ -238,6 +246,10 @@ if [ $drupal_upgrade -eq 1 ]; then
 
 		${drush} -y en module_filter
 		echo
+	fi
+
+	if [ -f /etc/vsftpd.conf ]; then
+		sudo chown -R www-data:www-data /var/www/html/sites
 	fi
 
 	sudo systemctl start apache2
