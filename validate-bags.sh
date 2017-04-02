@@ -1,9 +1,10 @@
 #!/bin/bash
 
-USAGE="Usage: $(basename $0) -i <input directory> -c <days>"
+USAGE="Usage: $(basename $0) -i <input directory> [-c <days>]"
 
 input=
 output=
+days=0
 
 while getopts "i:c:" opt; do
 	case $opt in
@@ -29,9 +30,11 @@ if [ ! -d ${input} ]; then
         exit 1
 fi
 
-if [[ ! ${days} =~ ^\+[0-9]+$ ]]; then
-        echo "${days}: invalid number of days."
-        exit 1
+if [ ${days} -ne 0 ]; then
+	if [[ ${days} =~ ^\+[0-9]+$ ]]; then
+	        echo "${days}: invalid number of days."
+	        exit 1
+	fi
 fi
 
 input=$(cd ${input}; pwd) # convert to absolute path
@@ -45,7 +48,9 @@ if [ ! -x ${bagit} ]; then
         exit 1
 fi
 
-if [ ${input} -a ${days} ]; then
+if [ ${input} -a ${days} -ne 0 ]; then
+	echo "Checking ${input} older than ${days}"
+
 	for a in $(find ${input} -maxdepth 1 -type d -name "*.bags" -mtime ${days}); do
 		for b in $(find ${a} -maxdepth 1 -type d ! -name "*.bags" -mtime ${days}); do
 			$bagit --validate $b
@@ -60,6 +65,8 @@ if [ ${input} -a ${days} ]; then
  		touch -c -m -t $(date +%Y%m%d0000.00) $a
 	done
 else
+	echo "Checking ${input}"
+
 	if [ ${input: -5} != ".bags" ]; then
 	        echo "${input}: not a directory ending with '.bags'."
 	        exit 1
@@ -73,5 +80,7 @@ else
 			echo "Input directory must a directory of valid bags."
 			exit 1
 		fi
+
+ 		touch -c -m -t $(date +%Y%m%d0000.00) $input/$i
 	done
 fi
