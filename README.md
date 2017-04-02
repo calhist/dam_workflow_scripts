@@ -87,6 +87,8 @@
   ~~~
   $ cd /data
   $ validate-bags.sh -i sample_1_source.bags
+  Checking /data/sample_1_source.bags
+  2017-04-02 13:51:55,097 - INFO - /data/sample_1_source.bags/image001 is valid
   ~~~
   
 ### On Production server (CHS-ISL001)
