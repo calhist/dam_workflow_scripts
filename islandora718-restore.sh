@@ -54,7 +54,7 @@ fi
 # Fedora
 #
 
-fedora_upgrade=0
+fedora_upgrade=1
 
 if [ $fedora_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
@@ -86,7 +86,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 	echo 'expect "Start rebuilding?*Enter (1-2) -->"'           >> rebuild
 	echo 'send "1\r"'                                           >> rebuild
 	echo 'expect "objects rebuilt.*Finished."'                  >> rebuild
-#	echo 'interact'                                             >> rebuild
+	echo '#interact'                                            >> rebuild
 
 	sudo -E -u tomcat7 expect rebuild | grep -v "Adding object "
 	echo
@@ -97,7 +97,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 	echo 'expect "Start rebuilding?*Enter (1-2) -->"'           >> rebuild
 	echo 'send "1\r"'                                           >> rebuild
 	echo 'expect "objects rebuilt.*Finished."'                  >> rebuild
-#	echo 'interact'                                             >> rebuild
+	echo '#interact'                                            >> rebuild
 
 	sudo -E -u tomcat7 expect rebuild | grep -v "Adding object "
 	echo
@@ -114,7 +114,7 @@ fi
 # Solr
 #
 
-solr_upgrade=0
+solr_upgrade=1
 
 if [ $solr_upgrade -eq 1 ]; then
 	if [ ! -d /usr/local/solr/collection1 ]; then
@@ -175,6 +175,14 @@ if [ $drupal_upgrade -eq 1 ]; then
 		tar xzf /tmp/${backup}.tar.gz -C /tmp/${backup}
 		rm /tmp/${backup}.tar.gz
 
+		${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
+#		${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
+#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
+#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
+#		sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
+#		sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
+		echo
+
 		sudo rsync -rlv --size-only --delete \
 			--exclude sites/default/settings.php \
 			--exclude sites/default/files/css/ \
@@ -200,11 +208,12 @@ if [ $drupal_upgrade -eq 1 ]; then
 #			find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
 #		done
 
-		sudo chown -R ubuntu:ubuntu ${docroot}
+#		sudo chown -R ubuntu:ubuntu ${docroot}
+		sudo chown -R ubuntu:www-data ${docroot}
 
-		sudo rsync -a --delete \
-			/tmp/${backup}/drupal7/sites/default/files/ \
-			            ${docroot}/sites/default/files/
+#		sudo rsync -a --delete \
+#			/tmp/${backup}/drupal7/sites/default/files/ \
+#			            ${docroot}/sites/default/files/
 
 		sudo chown -R ubuntu:www-data ${docroot}/sites/default/files
 
@@ -219,14 +228,6 @@ if [ $drupal_upgrade -eq 1 ]; then
 				echo
 			fi
 		done
-
-		${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
-#		${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
-#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
-#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
-#		sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
-#		sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
-		echo
 
 		cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
 		${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
