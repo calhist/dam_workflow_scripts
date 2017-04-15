@@ -62,7 +62,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 		exit
 	fi
 
-	sudo systemctl stop tomcat7
+	sudo service tomcat7 stop
 
 	echo restoring s3://${backups}/${backup}/fedora-data
 
@@ -104,7 +104,7 @@ if [ $fedora_upgrade -eq 1 ]; then
 
 	rm rebuild
 
-	sudo systemctl start tomcat7
+	sudo service tomcat7 start
 
 	echo Sleeping ...
 	sleep 60
@@ -122,7 +122,7 @@ if [ $solr_upgrade -eq 1 ]; then
 		exit
 	fi
 
-	sudo systemctl stop tomcat7
+	sudo service tomcat7 stop
 
 	echo Stopping tomcat7
 	sleep 30
@@ -131,7 +131,7 @@ if [ $solr_upgrade -eq 1 ]; then
 		sudo rm -rf /usr/local/solr/collection1/data/*
 	fi
 
-	sudo systemctl start tomcat7
+	sudo service tomcat7 start
 
 	echo Starting tomcat7
 	sleep 60
@@ -143,7 +143,7 @@ fi
 # Drupal
 #
 
-drupal_upgrade=0
+drupal_upgrade=1
 
 if [ $drupal_upgrade -eq 1 ]; then
 	source_db=drupal7.sql
@@ -158,7 +158,7 @@ if [ $drupal_upgrade -eq 1 ]; then
 
 	${drush} pm-list --format=list|sort > /tmp/installed-modules.txt
 
-	sudo systemctl stop apache2
+	sudo service apache2 stop
 
 	docroot=/var/www/html
 
@@ -175,14 +175,21 @@ if [ $drupal_upgrade -eq 1 ]; then
 		tar xzf /tmp/${backup}.tar.gz -C /tmp/${backup}
 		rm /tmp/${backup}.tar.gz
 
-		for i in $custom_modules; do
-			sudo rsync -a --delete \
-				/tmp/${backup}/drupal7/sites/all/modules/$i/ \
-				            ${docroot}/sites/all/modules/$i/
+		sudo rsync -rlv --size-only --delete \
+			--exclude sites/default/settings.php \
+			--exclude sites/default/files/css/ \
+			--exclude sites/default/files/js/ \
+			/tmp/${backup}/drupal7/ \
+			            ${docroot}/
 
-			find ${docroot}/sites/all/modules/$i -type f -exec chmod 644 {} \;
-			find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
-		done
+#		for i in $custom_modules; do
+#			sudo rsync -a --delete \
+#				/tmp/${backup}/drupal7/sites/all/modules/$i/ \
+#				            ${docroot}/sites/all/modules/$i/
+#
+#			find ${docroot}/sites/all/modules/$i -type f -exec chmod 644 {} \;
+#			find ${docroot}/sites/all/modules/$i -type d -exec chmod 755 {} \;
+#		done
 
 #		for i in $custom_themes; do
 #			sudo rsync -a --delete \
@@ -192,10 +199,6 @@ if [ $drupal_upgrade -eq 1 ]; then
 #			find ${docroot}/sites/all/themes/$i -type f -exec chmod 644 {} \;
 #			find ${docroot}/sites/all/themes/$i -type d -exec chmod 755 {} \;
 #		done
-
-		sudo rsync -a --delete \
-			/tmp/${backup}/drupal7/sites/all/themes/ \
-			            ${docroot}/sites/all/themes/
 
 		sudo chown -R ubuntu:ubuntu ${docroot}
 
@@ -218,11 +221,11 @@ if [ $drupal_upgrade -eq 1 ]; then
 		done
 
 		${drush} -y sql-cli < /tmp/${backup}/${source_db} 2>/dev/null
-		${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
-		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
-		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
-		sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
-		sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
+#		${drush} -y sql-query "DELETE FROM cache_bootstrap WHERE cid='system_list';" 2>/dev/null
+#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache_admin';" 2>/dev/null
+#		${drush} -y sql-query "UPDATE system SET status='0' WHERE name='memcache';" 2>/dev/null
+#		sed -i '/^memcache_admin$/d'       /tmp/enabled-modules.txt
+#		sed -i '/^memcache$/d'             /tmp/enabled-modules.txt
 		echo
 
 		cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
@@ -235,22 +238,32 @@ if [ $drupal_upgrade -eq 1 ]; then
 			exit
 		fi
 
-		${drush} -y en git_deploy
-		echo
+#		${drush} -y en git_deploy
+#		echo
 
-		${drush} -y up
-		echo
+#		${drush} -y up
+#		echo
 
 		${drush} -y vset islandora_base_url http://localhost:8080/fedora
 		echo
 
-		${drush} -y en module_filter
+#		${drush} -y en module_filter
+#		echo
+
+		${drush} -y cc all
 		echo
+
+		sudo rsync -nrlv --size-only --delete \
+			--exclude sites/default/settings.php \
+			--exclude sites/default/files/css/ \
+			--exclude sites/default/files/js/ \
+			/tmp/${backup}/drupal7/ \
+			            ${docroot}/
 	fi
 
 	if [ -f /etc/vsftpd.conf ]; then
 		sudo chown -R www-data:www-data /var/www/html/sites
 	fi
 
-	sudo systemctl start apache2
+	sudo service apache2 start
 fi
