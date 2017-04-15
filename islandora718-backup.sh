@@ -16,23 +16,30 @@ backups=chs-backups
 #sudo service tomcat7 stop > /dev/null
 
 #
-# Fedora
+# Fedora Data
 #
 
 if [ -d /usr/local/fedora/data ]; then
-	aws s3 --delete sync /usr/local/fedora/data/ s3://${backups}/${host}.${date}/fedora-data/
+	aws s3 --delete sync \
+		/usr/local/fedora/data/ \
+		s3://${backups}/${host}.${date}/fedora-data/
 else
 	echo "fedora is missing"
 	exit
 fi
 
-#a=`find /usr/local/fedora/data/ -type f | wc -l`
-#b=`aws s3 ls s3://${backups}/${host}.${date}/fedora-data/ --recursive | wc -l`
 #
-#if [ $a != $b ]; then
-#	echo "fedora backup failed"
-#	exit 
-#fi
+# Gsearch
+#
+
+if [ -d /usr/local/fedora/tomcat/webapps/fedoragsearch ]; then
+	aws s3 --delete sync \
+		/usr/local/fedora/tomcat/webapps/fedoragsearch/ \
+		s3://${backups}/${host}.${date}/fedoragsearch/
+else
+	echo "gsearch is missing"
+	exit
+fi
 
 #
 # Solr
