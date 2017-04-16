@@ -54,9 +54,9 @@ fi
 # Fedora
 #
 
-fedora_upgrade=1
+fedora_restore=0
 
-if [ $fedora_upgrade -eq 1 ]; then
+if [ $fedora_restore -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
 		echo "fedora missing"
 		exit
@@ -114,9 +114,9 @@ fi
 # Solr
 #
 
-solr_upgrade=1
+solr_restore=0
 
-if [ $solr_upgrade -eq 1 ]; then
+if [ $solr_restore -eq 1 ]; then
 	if [ ! -d /usr/local/solr/collection1 ]; then
 		echo "solr missing"
 		exit
@@ -143,9 +143,9 @@ fi
 # Drupal
 #
 
-drupal_upgrade=1
+drupal_restore=0
 
-if [ $drupal_upgrade -eq 1 ]; then
+if [ $drupal_restore -eq 1 ]; then
 	source_db=drupal7.sql
 
 	custom_modules='platform_content_types platform_main_feature dgi_ondemand islandora_accordion_rotator_module'
