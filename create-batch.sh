@@ -1,6 +1,6 @@
 #!/bin/bash
 
-USAGE="Usage: $(basename $0) -i <input directory> -c <collection name>"
+USAGE="Usage: $(basename $0) -i <input directory> -c <collection name> -m <content model>"
 
 input=
 output=$(mktemp -d --tmpdir=/tmp $(basename $0 .sh).XXXX)
@@ -19,6 +19,9 @@ while getopts "i:c:" opt; do
                 ;;
         c)
                 collection=$OPTARG
+                ;;
+        m)
+                model=$OPTARG
                 ;;
         \?)
                 echo ${USAGE}
@@ -85,12 +88,10 @@ echo drush \
 	--user=admin \
 	--uri=http://default \
 	islandora_batch_scan_preprocess \
-	--content_models=islandora:sp_large_image_cmodel \
-	--namespace=islandora \
+	--content_models=$model \
 	--parent=$collection \
-	--parent_relationship_pred=isMemberOfCollection \
 	--type=directory \
-	--target=/tmp/test
+	--target=$output
 
 #echo drush \
 #	--root=/var/www/drupal7 \
