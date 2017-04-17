@@ -57,8 +57,9 @@ fi
 bagit=/usr/local/bin/bagit.py
 
 if [ ! -x ${bagit} ]; then
-        echo "${bagit}: not found."
-        exit 1
+	echo "${bagit}: not found."
+	echo "might need to run: sudo pip install bagit"
+	exit 1
 fi
 
 for i in $(ls $input); do
