@@ -54,7 +54,7 @@ fi
 # Fedora
 #
 
-fedora_restore=0
+fedora_restore=1
 
 if [ $fedora_restore -eq 1 ]; then
 	if [ ! -d /usr/local/fedora/data ]; then
@@ -63,6 +63,9 @@ if [ $fedora_restore -eq 1 ]; then
 	fi
 
 	sudo service tomcat7 stop
+
+	echo Stopping tomcat7
+	sleep 30
 
 	echo restoring s3://${backups}/${backup}/fedora-data
 
@@ -143,7 +146,7 @@ fi
 # Drupal
 #
 
-drupal_restore=0
+drupal_restore=1
 
 if [ $drupal_restore -eq 1 ]; then
 	source_db=drupal7.sql
@@ -221,13 +224,13 @@ if [ $drupal_restore -eq 1 ]; then
 
 		enabled=`cat /tmp/enabled-modules.txt`
 
-		for i in $enabled; do
-			grep "^$i$" /tmp/installed-modules.txt > /dev/null
-			if [ $? -ne 0 ]; then
-				${drush} -y dl $i
-				echo
-			fi
-		done
+#		for i in $enabled; do
+#			grep "^$i$" /tmp/installed-modules.txt > /dev/null
+#			if [ $? -ne 0 ]; then
+#				${drush} -y dl $i
+#				echo
+#			fi
+#		done
 
 		cat /tmp/enabled-modules.txt|sort                    > /tmp/a.txt
 		${drush} pm-list --status=enabled --format=list|sort > /tmp/b.txt
@@ -245,11 +248,11 @@ if [ $drupal_restore -eq 1 ]; then
 #		${drush} -y up
 #		echo
 
-		${drush} -y vset islandora_base_url http://localhost:8080/fedora
-		echo
-
 #		${drush} -y en module_filter
 #		echo
+
+		${drush} -y vset islandora_base_url http://localhost:8080/fedora
+		echo
 
 		${drush} -y cc all
 		echo
@@ -263,7 +266,7 @@ if [ $drupal_restore -eq 1 ]; then
 	fi
 
 	if [ -f /etc/vsftpd.conf ]; then
-		sudo chown -R www-data:www-data /var/www/html/sites
+		sudo chown -R ubuntu:www-data /var/www/html/sites
 	fi
 
 	sudo service apache2 start
