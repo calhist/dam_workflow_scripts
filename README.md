@@ -68,7 +68,20 @@
   total size is 69,835  speedup is 0.98
   ~~~
   
-4. [NOT READY] Copy the collection of bags to the production server.
+4. [OPTIONAL] Copy the collection of bags to the sandbox server.
+
+  ~~~
+  $ copy-to-sandbox.sh -i "folder name".bags
+  ~~~
+
+  Example 1: sample_1_source.bags
+  
+  ~~~
+  $ cd /data/quarantine
+  $ copy-to-sandbox.sh -i sample_1_source.bags
+  ~~~
+  
+5. Copy the collection of bags to the production server.
 
   ~~~
   $ copy-to-production.sh -i "folder name".bags
@@ -90,7 +103,28 @@
   Checking /data/sample_1_source.bags
   2017-04-02 13:51:55,097 - INFO - /data/sample_1_source.bags/image001 is valid
   ~~~
+
+### On Sandbox server (islandora-chs)
+
+1. Create an ingest batch from the bags on the sandbox server.  Metadata is created if MODS file found in the bag.
+
+  ~~~
+  $ create-batch.sh -i "folder name".bags -c "collection name"
+  ~~~
   
+  Example 1: sample_1_source.bags
+  
+  ~~~
+  $ cd ~
+  $ create-batch.sh -i sample_1_source.bags
+  Checking /data/sample_1_source.bags
+  2017-04-02 13:51:55,097 - INFO - /data/sample_1_source.bags/image001 is valid
+  ~~~
+
+2. Ingest the batch.
+
+  http://islandora-chs.laddhanson.org/
+
 ### On Production server (CHS-ISL001)
 
 1. Review bags on the production server.
