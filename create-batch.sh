@@ -6,8 +6,9 @@ input=
 output=$(mktemp -d --tmpdir=/tmp $(basename $0 .sh).XXXX)
 
 function cleanup {
-	rm -rf $output
-	echo "Deleted temp working directory $output"
+	if [ -d $output ]; then
+		rm -rf $output
+	fi
 }
 
 trap cleanup EXIT
