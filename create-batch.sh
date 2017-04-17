@@ -46,12 +46,12 @@ if [ ${input: -5} != ".bags" ]; then
         exit 1
 fi
 
-#drush=/usr/local/bin/drush
-#
-#if [ ! -x ${drush} ]; then
-#        echo "${drush}: not found."
-#        exit 1
-#fi
+drush=/home/ubuntu/.config/composer/vendor/bin/drush
+
+if [ ! -x ${drush} ]; then
+        echo "${drush}: not found."
+        exit 1
+fi
 
 bagit=/usr/local/bin/bagit.py
 
