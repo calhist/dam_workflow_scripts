@@ -1,19 +1,11 @@
 #!/bin/bash
 
-USAGE="Usage: $(basename $0) -i <input directory> -c <collection name> -m <content model>"
+USAGE="Usage: $(basename $0) -i <input directory> -c <collection pid> -m <content model pid>"
 
 input=
-output=$(mktemp -d --tmpdir=/tmp $(basename $0 .sh).XXXX)
+output=
 
-function cleanup {
-	if [ -d $output ]; then
-		rm -rf $output
-	fi
-}
-
-trap cleanup EXIT
-
-while getopts "i:c:" opt; do
+while getopts "i:c:m:" opt; do
         case $opt in
         i)
                 input=$OPTARG
@@ -47,6 +39,24 @@ if [ ${input: -5} != ".bags" ]; then
         exit 1
 fi
 
+output=${input/%.bags/.batch}
+
+if [ -d ${output} ]; then
+	rm -rf ${output}
+fi
+
+mkdir ${output}
+
+if [[ ! $collection =~ ^islandora:.* ]]; then
+	echo "${collection}: invalid collection pid."
+	exit 1
+fi
+
+if [[ ! $model =~ ^islandora:.* ]]; then
+	echo "${model}: invalid model pid."
+	exit 1
+fi
+
 drush=/home/ubuntu/.config/composer/vendor/bin/drush
 
 if [ ! -x ${drush} ]; then
@@ -72,33 +82,32 @@ for i in $(ls $input); do
         fi
 done
 
-for i in $(ls $input/*/data/*|egrep '.[jpg|tif|png$]'); do
-	bag=$(basename $i .tif)
-	dir=$(dirname $i)
-	tif=$(basename $i)
-	xml=$(basename $i .tif).xml
+for base in $(ls $input/); do
+	bags=$input
+	bag_data_dir=$bags/$base/data
 
-	echo cp $dir/$tif $output/$tif
+	for i in $(ls $bag_data_dir/); do
+		if [[ $i =~ $base\.(jpg|png|tif)$ ]]; then
+			cp $bag_data_dir/$i $output/$i
+		fi
+	done
 
-	if [ -f $dir/$xml ]; then
-		echo cp $dir/$xml $output/$xml
+	  if [ -f $bag_data_dir/MODS.xml ]; then
+		cp $bag_data_dir/MODS.xml $output/$base.xml
+	elif [ -f $bag_data_dir/MARC.xml ]; then
+		cp $bag_data_dir/MARC.xml $output/$base.xml
+	elif [ -f $bag_data_dir/MARC.mrc ]; then
+		cp $bag_data_dir/MARC.mrc $output/$base.mrc
+	elif [ -f $bag_data_dir/DC.xml ]; then
+		cp $bag_data_dir/DC.xml $output/$base.xml
 	fi
 done
 
-echo drush \
-	--root=/var/www/drupal7 \
-	--user=admin \
-	--uri=http://default \
+ls -lh $output
+
+drush --user=admin \
 	islandora_batch_scan_preprocess \
 	--content_models=$model \
 	--parent=$collection \
 	--type=directory \
 	--target=$output
-
-#echo drush \
-#	--root=/var/www/drupal7 \
-#	--user=admin \
-#	--uri=http://default \
-#	islandora_batch_ingest
-
-
