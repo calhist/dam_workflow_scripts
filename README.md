@@ -109,14 +109,14 @@
 1. Create an ingest batch from the bags on the sandbox server.  Metadata is created if MODS file found in the bag.
 
   ~~~
-  $ create-batch.sh -i "folder name".bags -c "collection name"
+  $ create-batch.sh -i "folder name".bags -c "collection pid" -m "content model pid"
   ~~~
   
   Example 1: sample_1_source.bags
   
   ~~~
   $ cd ~
-  $ create-batch.sh -i sample_1_source.bags
+  $ create-batch.sh -i sample_1_source.bags -c islandora:sp_basic_image_collection -m islandora:sp_basic_image
   Checking /data/sample_1_source.bags
   2017-04-02 13:51:55,097 - INFO - /data/sample_1_source.bags/image001 is valid
   ~~~
@@ -134,7 +134,7 @@
 2. Create an ingest batch from the bags on the production server.  Metadata is created if MODS file found in the bag.
 
   ~~~
-  $ create-batch.sh -i "folder name".bags -c "collection name"
+  $ create-batch.sh -i "folder name".bags -c "collection pid" -m "content model pid"
   ~~~
 
 3. Ingest the batch.
