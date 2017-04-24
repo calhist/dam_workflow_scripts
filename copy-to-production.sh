@@ -65,4 +65,4 @@ done
 
 echo
 
-echo rsync -nav $input/ $production:/home/ubuntu/$output/
+rsync -nav $input/ $production:$output/
