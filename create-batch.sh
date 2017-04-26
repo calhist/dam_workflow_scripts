@@ -59,6 +59,10 @@ fi
 
 drush=/home/ubuntu/.config/composer/vendor/bin/drush
 
+if [ -x /usr/bin/drush ]; then
+	drush=/usr/bin/drush
+fi
+
 if [ ! -x ${drush} ]; then
         echo "${drush}: not found."
         exit 1
