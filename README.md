@@ -84,6 +84,7 @@
 5. Copy the collection of bags to the production server.
 
   ~~~
+  $ cd /data/quarantine
   $ copy-to-production.sh -i "folder name".bags
   ~~~
 
