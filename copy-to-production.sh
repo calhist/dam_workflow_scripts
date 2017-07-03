@@ -30,7 +30,7 @@ if [ ! -d ${input} ]; then
 fi
 
 input=$(cd ${input}; pwd) # convert to absolute path
-output=$(basename $input)
+output=/data/quarantine/$(basename $input)
 
 if [ ${input: -5} != ".bags" ]; then
         echo "${input}: not a directory ending with '.bags'."
@@ -66,3 +66,7 @@ done
 echo
 
 rsync -av $input/ $production:$output/
+
+ssh $production chmod -R 0775 $output
+
+ssh $production chgrp -R www-data $output
