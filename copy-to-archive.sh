@@ -2,7 +2,7 @@
 
 USAGE="Usage: $(basename $0) -i <input directory>"
 
-#archive=chsadmin@74.115.17.33:60222
+#archive=chsadmin@173.247.82.244:60222
 archive=chs3
 
 input=
