@@ -47,11 +47,6 @@ fi
 
 mkdir ${output}
 
-if [[ ! $collection =~ ^islandora:.* ]]; then
-	echo "${collection}: invalid collection pid."
-	exit 1
-fi
-
 if [[ ! $model =~ ^islandora:.* ]]; then
 	echo "${model}: invalid model pid."
 	exit 1
