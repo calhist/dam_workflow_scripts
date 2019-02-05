@@ -91,7 +91,7 @@ for base in $(ls $input/); do
 	bag_data_dir=$bags/$base/data
 
 	for i in $(ls $bag_data_dir/); do
-		if [[ $i =~ $base\.(jpg|png|tif)$ ]]; then
+		if [[ $i =~ $base\.(jpg|png|tif|mp3)$ ]]; then
 			cp $bag_data_dir/$i $output/$i
 		fi
 	done
