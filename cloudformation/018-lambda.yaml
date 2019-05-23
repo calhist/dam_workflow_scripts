@@ -1,0 +1,144 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Common Lambda functions
+
+Resources:
+
+# Lambda Functions
+
+  StartInstanceFunction: 
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: !Sub ${AWS::StackName}-start-instance
+      Handler: index.handler
+      Role: !GetAtt StartInstanceExecutionRole.Arn
+      Code:
+        ZipFile: |
+          let aws = require('aws-sdk');
+          let ec2 = new aws.EC2();
+          exports.handler = async (event) => {
+            console.log('INPUT', event);
+            let id = event.id;
+            try {
+              let data = await ec2.startInstances({ InstanceIds: [ id ] }).promise();
+              console.log('DATA', data);
+            } catch(error) {
+              throw new Error(error);
+            }
+          };
+      Runtime: nodejs8.10
+      Timeout: 10
+    Metadata:
+      Cost: $0.20/1M Requests
+
+  StartInstanceExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+              - Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                Resource: '*'
+
+  StartInstanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-start-instance
+      RetentionInDays: 3
+
+  StopInstanceFunction: 
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: !Sub ${AWS::StackName}-stop-instance
+      Handler: index.handler
+      Role: !GetAtt StopInstanceExecutionRole.Arn
+      Code:
+        ZipFile: |
+          let aws = require('aws-sdk');
+          let ec2 = new aws.EC2();
+          exports.handler = async (event) => {
+            console.log('INPUT', event);
+            let id = event.id;
+            try {
+              let data = await ec2.stopInstances({ InstanceIds: [ id ] }).promise();
+              console.log('DATA', data);
+            } catch(error) {
+              throw new Error(error);
+            }
+          };
+      Runtime: nodejs8.10
+      Timeout: 10
+    Metadata:
+      Cost: $0.20/1M Requests
+
+  StopInstanceExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+              - Effect: Allow
+                Action:
+                  - ec2:StopInstances
+                Resource: '*'
+
+  StopInstanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-stop-instance
+      RetentionInDays: 3
+
+Outputs:
+
+  StartInstanceFunctionARN:
+    Description: Start EC2 Instance
+    Value: !GetAtt StartInstanceFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-StartInstanceFunctionARN
+
+  StopInstanceFunctionARN:
+    Description: Stop EC2 Instance
+    Value: !GetAtt StopInstanceFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-StopInstanceFunctionARN

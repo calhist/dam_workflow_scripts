@@ -1,0 +1,126 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: S3 Buckets
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Local
+        Parameters:
+          - UploadsName
+          - CertificatesName
+          - StagingName
+          - ArchiveName
+    ParameterLabels:
+      UploadsName:
+        default: Uploads Bucket Name
+      CertificatesName:
+        default: Server Certificates Name
+      StagingName:
+        default: Staging Bucket Name
+      ArchiveName:
+        default: Archive Bucket Name
+
+Parameters:
+
+  UploadsName:
+    Type: String
+
+  CertificatesName:
+    Type: String
+
+  StagingName:
+    Type: String
+
+  ArchiveName:
+    Type: String
+
+Conditions:
+  UseUploadsName: !Equals [ !Ref UploadsName, '' ]
+  UseCertificatesName: !Equals [ !Ref CertificatesName, '' ]
+  UseStagingName: !Equals [ !Ref StagingName, '' ]
+  UseArchiveName: !Equals [ !Ref ArchiveName, '' ]
+
+Resources:
+
+  UploadsBucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName:
+        !If 
+          - UseUploadsName
+          - !Sub ${AWS::AccountId}-uploads
+          - !Sub ${AWS::AccountId}-${UploadsName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
+  CertificatesBucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName:
+        !If 
+          - UseCertificatesName
+          - !Sub ${AWS::AccountId}-certificates
+          - !Sub ${AWS::AccountId}-${CertificatesName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
+  StagingBucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName:
+        !If 
+          - UseStagingName
+          - !Sub ${AWS::AccountId}-staging
+          - !Sub ${AWS::AccountId}-${StagingName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
+  ArchiveBucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName:
+        !If 
+          - UseArchiveName
+          - !Sub ${AWS::AccountId}-archive
+          - !Sub ${AWS::AccountId}-${ArchiveName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
+
+Outputs:
+
+  UploadsBucket:
+    Value: !Ref UploadsBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-uploads
+
+  CertificatesBucket:
+    Value: !Ref CertificatesBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-certificates
+
+  StagingBucket:
+    Value: !Ref StagingBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-staging
+
+  ArchiveBucket:
+    Value: !Ref ArchiveBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-archive

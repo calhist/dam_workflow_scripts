@@ -1,0 +1,36 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Systems Manager
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Local
+        Parameters:
+          - Timezone
+    ParameterLabels:
+      Timezone:
+        default: Timezone
+
+Parameters:
+
+  Timezone:
+    Description: Local timezone
+    Type: String
+    Default: America/Los_Angeles
+
+Resources:
+
+  MaintenanceWindow:
+    Type: AWS::SSM::MaintenanceWindow
+    Properties:
+      Name: its-default
+      Description: ITS default maintenance window
+      AllowUnassociatedTargets: false
+      Schedule: "cron(0 4 ? * TUE *)"       # 4:00 AM CT on Tuesdays
+      Duration: 2
+      Cutoff: 1
+      ScheduleTimezone: !Ref Timezone

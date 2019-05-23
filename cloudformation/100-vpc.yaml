@@ -1,0 +1,366 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: VPC
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Resources
+        Parameters:
+          - CreateNAT
+    ParameterLabels:
+      CreateNAT:
+        default: Create NAT Instance
+
+Parameters:
+
+  CreateNAT:
+    Type: String
+    ConstraintDescription: Value must be true or false
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
+Mappings:
+
+  # Maps CIDR blocks to VPC and various subnets
+  # A VPC spans all the Availability Zones in the region.
+  # Each subnet must reside entirely within one Availability Zone. 
+  # The first four and last address in each block are reserved.
+  #   x.x.x.0   Network address
+  #   x.x.x.1   VPC router
+  #   x.x.x.2   DNS
+  #   x.x.x.3   Future use
+  #   x.x.x.255 Broadcast address
+  # https://www.site24x7.com/tools/ipv4-subnetcalculator.html
+  CIDRMap:
+    VPC:
+      CIDR1: 10.0.0.0/16
+    Public1:
+      CIDR: 10.0.10.0/24
+    Public2:
+      CIDR: 10.0.20.0/24
+    Private1:
+      CIDR: 10.0.11.0/24
+    Private2:
+      CIDR: 10.0.21.0/24
+
+  # InspectorMap:
+  #   us-east-1:
+  #     CVEs: arn:aws:inspector:us-east-1:316112463485:rulespackage/0-gEjTy7T7
+  #     CISBenchmarks: arn:aws:inspector:us-east-1:316112463485:rulespackage/0-rExsr2X8
+  #     Reachability: arn:aws:inspector:us-east-1:316112463485:rulespackage/0-PmNV0Tcd
+  #     BestPractices: arn:aws:inspector:us-east-1:316112463485:rulespackage/0-R01qwB5Q
+  #     RuntimeBehavior: arn:aws:inspector:us-east-1:316112463485:rulespackage/0-gBONHN9h
+
+Conditions:
+
+  UseNAT: !Equals [ !Ref CreateNAT, true ]
+
+Resources:
+
+# VPC
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap [CIDRMap, VPC, CIDR1]
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: 
+        - Key: Name 
+          Value: !Ref AWS::StackName
+    Metadata:
+      Cost: free
+
+# Subnets 
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !FindInMap [ CIDRMap, Public1, CIDR ]
+      MapPublicIpOnLaunch: true
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-public-subnet1
+    Metadata:
+      Cost: free
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: !FindInMap [ CIDRMap, Public2, CIDR ]
+      MapPublicIpOnLaunch: true
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-public-subnet2
+    Metadata:
+      Cost: free
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !FindInMap [ CIDRMap, Private1, CIDR ]
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-private-subnet1
+    Metadata:
+      Cost: free
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      CidrBlock: !FindInMap [ CIDRMap, Private2, CIDR ]
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-private-subnet2
+    Metadata:
+      Cost: free
+
+# Gateways
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-igw
+    Metadata:
+      Cost: free
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+    Metadata:
+      Cost: free
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Condition: UseNAT
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      Domain: vpc
+
+  NatGateway: 
+    Type: AWS::EC2::NatGateway
+    Condition: UseNAT
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-nat
+    Metadata:
+      Cost: 0.045 ($/hour); 0.045 ($/GB)
+
+# Routing
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${AWS::StackName}-public-igw
+    Metadata:
+      Cost: free
+
+  PublicRoute: 
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+    Metadata:
+      Cost: free
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+    Metadata:
+      Cost: free
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+    Metadata:
+      Cost: free
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name 
+          Value:
+            !If 
+              - UseNAT
+              - !Sub ${AWS::StackName}-private-nat
+              - !Sub ${AWS::StackName}-private
+    Metadata:
+      Cost: free
+
+  DefaultPrivateRoute:
+    Type: AWS::EC2::Route
+    Condition: UseNAT
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+    Metadata:
+      Cost: free
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+    Metadata:
+      Cost: free
+
+# Logging
+
+  # LogsVPCEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     PolicyDocument:
+  #       Statement: 
+  #         - Effect: Allow
+  #           Principal: '*'
+  #           Action: '*'
+  #           Resource: '*'
+  #             # - !Sub "arn:aws:s3:::${AWS::StackName}-logs/*"
+  #             # - !Sub "arn:aws:s3:::repo.${AWS::StackName}.amazonaws.com"
+  #             # - !Sub "arn:aws:s3:::repo.${AWS::StackName}.amazonaws.com/*"
+  #     RouteTableIds:
+  #       - !Ref PublicRouteTable
+  #       - !Ref PrivateRouteTable
+  #     ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+  #     VpcId: !Ref VPC
+  #   Metadata:
+  #     Cost: 0.01 ($/hour); 0.01 ($/GB)
+
+  # bucket:
+  #   Type: AWS::S3::Bucket
+  #   Properties:
+  #     BucketName: !Sub ${AWS::AccountId}-flowlogs
+  #     BucketEncryption:
+  #       ServerSideEncryptionConfiguration:
+  #         - ServerSideEncryptionByDefault:
+  #             SSEAlgorithm: AES256
+  #   DeletionPolicy: Retain
+  #   Metadata:
+  #     Cost: 0.023 ($/GB)
+
+  # bucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties: 
+  #     Bucket: !Ref bucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement: 
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: delivery.logs.amazonaws.com
+  #           Action: s3:GetBucketAcl
+  #           Resource: !Sub arn:aws:s3:::${bucket}
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: delivery.logs.amazonaws.com
+  #           Action:  s3:PutObject
+  #           Resource: !Sub arn:aws:s3:::${bucket}/AWSLogs/${AWS::AccountId}/*
+  #           Condition:
+  #             StringEquals:
+  #               s3:x-amz-acl: bucket-owner-full-control
+  #   Metadata:
+  #     Cost: free
+
+  # VpcFlowLog:
+  #   Type: AWS::EC2::FlowLog
+  #   Properties:
+  #     LogDestination: !GetAtt bucket.Arn
+  #     LogDestinationType: s3
+  #     ResourceId: !Ref VPC
+  #     ResourceType: VPC
+  #     TrafficType: ALL
+  #   Metadata:
+  #     Cost: free
+
+Outputs: 
+
+  VPC: 
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC
+
+  PublicSubnet1:
+    Description: Public Subnet 1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1
+
+  PublicSubnet1CIDR:
+    Description: Public Subnet 1
+    Value: !FindInMap [ CIDRMap, Public1, CIDR ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1CIDR
+
+  PublicSubnet2:
+    Description: Public Subnet 2
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2
+
+  PublicSubnet2CIDR:
+    Description: Public Subnet 2
+    Value: !FindInMap [ CIDRMap, Public2, CIDR ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2CIDR
+
+  PrivateSubnet1:
+    Description: Private Subnet 1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1
+
+  PrivateSubnet1CIDR:
+    Description: Private Subnet 1
+    Value: !FindInMap [ CIDRMap, Private1, CIDR ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1CIDR
+
+  PrivateSubnet2:
+    Description: Private Subnet 2
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2

@@ -1,0 +1,85 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Elastic File System
+
+# Metadata:
+
+  # AWS::CloudFormation::Interface:
+  #   ParameterGroups:
+  #     - Label:
+  #         default: Label A
+  #       Parameters:
+  #         - ParameterA
+  #   ParameterLabels:
+  #     ParameterA:
+  #       default: This is parameter A (exported)
+
+# Parameters:
+
+  # ParameterA:
+  #   Description: A description of parameter A
+  #   Type: String
+  #   ConstraintDescription: Value must be true or false
+  #   Default: true
+  #   AllowedValues:
+  #     - true
+  #     - false
+
+# Mappings:
+
+# Conditions:
+
+  # IsParameterA: Equals [ !Ref ParameterA, true ]
+
+# Transform:
+
+Resources:
+
+# EFS
+
+  # NOTE: Lifecycle policy not available in CloudFormation yet.
+
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties: 
+      PerformanceMode: generalPurpose
+      # PerformanceMode: maxIO
+      # ProvisionedThroughputInMibps: 0.0 # Double
+      ThroughputMode: bursting # provisioned
+      Encrypted: true
+      # KmsKeyId: String
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}
+    Metadata:
+      Cost: 0.30 ($/GB-Month) # Standard Storage; Bursting Throughput mode
+      # Example: 100 GB x 31 days x 24 hours/day = 74,400 GB-Hours
+      #          74,400 GB-hours / (31 days/month x 24 hours/day) = 100 GB-Month
+      #          100 GB-Month x 0.30 = $30/month or $360/year
+      # Cost: 0.045 ($/GB-Month) # Infrequent Access Storage
+      # Cost: 0.010 ($/GB transferred) # Infrequent Access Requests
+      # Cost: 6.00 ($/MB/s-Month) # Provisioned Throughput
+
+  # MountTarget:
+  #   Type: AWS::EFS::MountTarget
+  #   Properties:
+  #     FileSystemId: String
+  #     IpAddress: String
+  #     SecurityGroups:
+  #       [ String, ... ]
+  #     SubnetId: String
+
+Outputs: 
+
+  FileSystem: 
+    Description: A reference to the filesystem
+    Value: !Ref FileSystem
+    Export:
+      Name: !Sub ${AWS::StackName}-FileSystem
+
+  DNSName: 
+    Description: A reference to the filesystem
+    Value: !Sub ${FileSystem}.efs.${AWS::Region}.amazonaws.com
+    Export:
+      Name: !Sub ${AWS::StackName}-DNSName

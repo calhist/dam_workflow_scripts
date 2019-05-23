@@ -1,0 +1,475 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: EC2 Instance
+
+# Parameter Store:
+#   aws --profile <profile>
+#     ssm put-parameter --name smtp-username --value CHANGEME --type String
+#     ssm put-parameter --name smtp-password --value CHANGEME --type String
+#     ssm describe-parameters
+#
+#   Update smtp-username/smtp-password with SES values creted from the console
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Parent Stacks
+        Parameters:
+          - VPCStackName
+          - EIPStackName
+          - EFSStackName
+      - Label:
+          default: Instance
+        Parameters:
+          - AMI
+          - Type
+          - Size
+          - Key
+          - SMTPUsername
+          - SMTPPassword
+          - DefaultEmail
+          - Timezone
+    ParameterLabels:
+      VPCStackName:
+        default: Network Layer
+      EIPStackName:
+        default: Elastic IPs
+      EFSStackName:
+        default: Elastic File Systems
+      AMI:
+        default: Machine Image
+      Type:
+        default: Type
+      Size:
+        default: Root Disk Size
+      Key:
+        default: PEM Key
+      SMTPUsername:
+        default: SES SMTP Username
+      SMTPPassword:
+        default: SES SMTP Password
+      DefaultEmail:
+        default: Default Email
+      Timezone:
+        default: Timezone
+
+Parameters:
+
+  VPCStackName:
+    Type: String
+    MinLength: 3
+    MaxLength: 32
+    AllowedPattern: (^vpc$|^[a-zA-Z][a-zA-Z0-9-]*-vpc$)
+    ConstraintDescription: Please enter a valid VPC stack name
+
+  EIPStackName:
+    Type: String
+    MinLength: 3
+    MaxLength: 32
+    AllowedPattern: (^eip$|^[a-zA-Z][a-zA-Z0-9-]*-eip$)
+    ConstraintDescription: Please enter a valid EIP stack name
+
+  EFSStackName:
+    Type: String
+    MinLength: 3
+    MaxLength: 32
+    AllowedPattern: (^efs$|^[a-zA-Z][a-zA-Z0-9-]*-efs$)
+    ConstraintDescription: Please enter a valid EFS stack name
+
+  AMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-005bdb005fb00e791 # Ubuntu Server 18.04 LTS (HVM), SSD Volume Type (64-bit x86)
+
+  # t3.large  2 Variable   8 GiB EBS Only  $0.0832 per Hour
+  # m5.large  2 8          8 GiB EBS Only  $0.096 per Hour
+
+  # t3.xlarge 4 Variable  16 GiB  EBS Only  $0.1664 per Hour
+  # m5.xlarge 4 16        16 GiB  EBS Only  $0.192 per Hour
+
+  Type: 
+    Type: String
+    Default: m5.large # Komodo: 4 CPU, 16GB memory
+
+  Size: 
+    Type: String
+    Default: 200
+
+  Key: 
+    Description: Used for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+
+  SMTPUsername:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: smtp-username
+
+  SMTPPassword:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: smtp-password
+
+  DefaultEmail:
+    Type: String
+    Default: digitallibrary@calhist.org
+    MinLength: 1
+    MaxLength: 32
+
+  Timezone:
+    Description: Local timezone
+    Type: String
+    Default: America/Los_Angeles
+
+Resources:
+
+# Elastic Filesystem
+
+  MountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Fn::ImportValue: !Sub ${EFSStackName}-FileSystem
+      SecurityGroups:
+        - !Ref SecurityGroup
+      SubnetId:
+        Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet1
+
+# Instance
+
+  InstanceRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      RoleName: !Sub ${AWS::StackName}
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - ec2.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+  InstanceProfile: 
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}
+      Roles: 
+        - !Ref InstanceRole
+
+  InstanceNetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties: 
+      GroupSet:
+        - !Ref SecurityGroup
+      SubnetId:
+        Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}
+
+  Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: MountTarget
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        configSets: 
+          default: 
+            - Common
+            - Ubuntu18
+            - Postfix
+            - DGI
+        Common:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                verbose=true
+                interval=5
+              mode: "000400"
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.Instance.Metadata.AWS::CloudFormation::Init
+                action=/usr/local/bin/cfn-init --region ${AWS::Region} --stack ${AWS::StackName} --resource Instance -c default
+              mode: "000400"
+              owner: root
+              group: root
+            /lib/systemd/system/cfn-hup.service:
+              content: !Sub |
+                [Unit]
+                Description=cfn-hup daemon
+                [Service]
+                Type=simple
+                ExecStart=/usr/local/bin/cfn-hup
+                Restart=always
+                [Install]
+                WantedBy=multi-user.target
+              mode: "000400"
+              owner: root
+              group: root
+            /opt/aws/amazon-cloudwatch-agent/bin/config.json:
+              content: !Sub |
+                {
+                  "metrics": {
+                    "append_dimensions": {
+                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
+                      "ImageId": "${!aws:ImageId}",
+                      "InstanceId": "${!aws:InstanceId}",
+                      "InstanceType": "${!aws:InstanceType}"
+                    },
+                    "metrics_collected": {
+                      "disk": {
+                        "measurement": [
+                          "used_percent"
+                        ],
+                        "resources": [
+                          "*"
+                        ]
+                      },
+                      "mem": {
+                        "measurement": [
+                          "mem_used_percent"
+                        ]
+                      },
+                      "swap": {
+                        "measurement": [
+                          "swap_used_percent"
+                        ]
+                      }
+                    }
+                  },
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [
+                          {
+                            "file_path": "/var/log/messages",
+                            "log_group_name": "messages"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              owner: root
+              group: root
+              mode: '000644'
+          commands:
+            '10':
+              command: !Sub timedatectl set-timezone ${Timezone}
+            '20':
+              command: systemctl enable cfn-hup.service
+            '30':
+              command: systemctl start cfn-hup.service
+            '40':
+              # Check status: amazon-cloudwatch-agent-ctl -a status
+              command: |
+                /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+                  -a fetch-config \
+                  -m ec2 \
+                  -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json \
+                  -s
+        Ubuntu18:
+          files:
+            /etc/fstab:
+              content: |
+                LABEL=cloudimg-rootfs /     ext4 defaults,discard  0 0
+                {{efs}}:/             /data efs  defaults,_netdev  0 0
+              context:
+                efs:
+                  Fn::ImportValue: !Sub ${EFSStackName}-FileSystem
+              owner: root
+              group: root
+              mode: "000644"
+          packages:
+            apt:
+              binutils: []
+              postfix: []
+          commands:
+            '10':
+              command: apt -y update
+            '20':
+              command: |
+                git clone https://github.com/aws/efs-utils && \
+                cd efs-utils && \
+                ./build-deb.sh && \
+                apt -y install ./build/amazon-efs-utils*deb
+            '30':
+              command: mkdir /data && mount /data
+        Postfix:
+          # Test with something like ...
+          #
+          # $ sendmail -f ladd@austin.utexas.edu ladd.hanson@gmail.com
+          # From: Ladd Hanson <ladd@austin.utexas.edu>
+          # Subject: test 1
+          # test 1
+          # .
+          files:
+            /etc/postfix/sasl_passwd:
+              content: !Sub |
+                [email-smtp.${AWS::Region}.amazonaws.com]:587 {{username}}:{{password}}
+              context:
+                username: !Ref SMTPUsername
+                password: !Ref SMTPPassword
+              owner: root
+              group: root
+              mode: "000600"
+          commands:
+            '10':
+              command: !Sub postconf -e relayhost=[email-smtp.${AWS::Region}.amazonaws.com]:587 \
+                smtp_sasl_auth_enable=yes \
+                smtp_sasl_security_options=noanonymous \
+                smtp_sasl_password_maps=hash:/etc/postfix/sasl_passwd \
+                smtp_use_tls=yes \
+                smtp_tls_security_level=encrypt \
+                smtp_tls_note_starttls_offer=yes
+            '20':
+              command: |
+                postmap hash:/etc/postfix/sasl_passwd; \
+                chown root:root /etc/postfix/sasl_passwd.db; \
+                chmod 0600 /etc/postfix/sasl_passwd.db
+            '30':
+              # Amazon Linux 2
+              # command: postconf -e smtp_tls_CAfile=/etc/ssl/certs/ca-bundle.crt
+              # Ubuntu
+              command: postconf -e smtp_tls_CAfile=/etc/ssl/certs/ca-certificates.crt
+            '40':
+              command: systemctl reload postfix
+            '50':
+              command: !Sub |
+                echo root: ${DefaultEmail} >> /etc/aliases
+            '60':
+              # Amazon Linux 2
+              # command: !Sub |
+              #   echo ec2-user: ${DefaultEmail} >> /etc/aliases
+              # Ubuntu
+              command: !Sub |
+                echo ubuntu: ${DefaultEmail} >> /etc/aliases
+            '70':
+              command: newaliases
+        DGI:
+          files:
+            /etc/sudoers.d/dgi-users:
+              content:
+                ackiejoe ALL=(ALL) NOPASSWD:ALL
+                gervaisdeM ALL=(ALL) NOPASSWD:ALL
+                lutaylor ALL=(ALL) NOPASSWD:ALL
+                nhart ALL=(ALL) NOPASSWD:ALL
+                ziono4ka ALL=(ALL) NOPASSWD:ALL
+              mode: "000440"
+              owner: root
+              group: root
+          commands:
+            '10':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Alex Morrison' ackiejoe && \
+                mkdir /home/ackiejoe/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC/VK1biutwlxtJfeVSGFcnklms0vnohEx9YkoxIBy5bqx8lg/pBWBDp13azA94LSkQAwvcM/jY1PTFoir6Kg6nlFEDDrqfbSFjIMxZ902ZVan1i6DZgWfFCrNOYs82AysvEWZ8kJiNn1/IJr6Shc/T3EQFlaWgINWZncc++dJjHVnUhAP68pnBvrS4fLfGPGBmI0mVgrIJW9zaCmoKYmVV3KzCtCWifQ99I0Q9o3NT7kHclFAzTrqitk7NIfWArMA8IZ9ox/1KaKZ8C8q+yPeIoxcUX5Mm/pP0dYlPM5MpeB5QWBl6UiJr5cVhMDAuT3qhK98N8B65WaW3W+X7mUwMHe0CbWOKnpS4QsI/F2XIlo4LMGGMhxj3ga2dQyctYOUETpILYnNJcrTnrMwhBRSIu9Y4fUqKgM9j1G77I6q0FB/LGYQyRgBqLSpuD5d9JiInI9skeFwPmIb4r6UmUcvKf2yEez2LsgjVIHKMI1pPYlJsvQZYDCb0ntevjiLTi3lpqnnj4QKSPCuj2jhulagWMghVpP7KocVw6pc/wTiv6N5RbCi1gZ11esqVSp6ruq/WRFenrNQZ8UuyttCga7x5RD1/EyZYZHDp0zqnpdsHqtodmG4T7Lv+sjuP2w9OatLrPPeW4d4iZn7mL7+vFkK/+apCAc1hgZ+xr6yr2xMk3w== > /home/ackiejoe/.ssh/authorized_keys && \
+                chown -R ackiejoe:ackiejoe /home/ackiejoe/.ssh
+            '20':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Gervais de Montbrun' gervaisdeM && \
+                mkdir /home/gervaisdeM/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDqar/WjxQFleVr3Y2MRNW0y9OFjuxXVZa9sI0lOKpjJ1vkM3QBzTA6aRcDgyLY09giUpNGgZm4gri5m9g0SMKOJ7xHMmyD9iH2lpa/8om1sdAtAUEWOEYOAogcddvjGuPoqhLfZKgMHK79Nf8Rb8TJp8GNr7yQUmAvejzSXzI+oSvR1Un5zuIETTAI49a1coQ7tM+tiz/qmuv/BN0M0cGNc8qtJ5nsOuGBxZfm/GJRQibiB0qLstIFSS34QjaiYa76ZXzZVx9gm0h0GIEVXf3nW5vGucxbvt/Rzrb1IsovA6y0BYiyX/Bj9dfnqgc5IRDhyL2mcqELZ8fco2zV7l99 > /home/gervaisdeM/.ssh/authorized_keys && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKA27FKurlDcfmY6QlrAVYOTISPXR4Xr3iHNsVW0GSUWJRRYyzNNarRjyZQVxMal0rJH8QsGSw4cdQ/VgVQtChpWrJbsynrjQ94dIx7lYVOUYGDmohNP2XEpfvNMQGXlcdpFspYxtJ8qGwM6BMdFFf0HS9mV0gqp2sBEyPNLbhIk7EIBUbL82PKBRYC/Qa6yBLkxcnXIAbFpUzkXWAekInt0hXuSktSLGHYUNs/DZRjex9fgXzd4MV5E3UmWdmAdVHK9gBGfZpayw1kAzXi3+KNcEDjWD6W1oDTHKMIqFiwgq9TId7D3IAVL25PX1oR0zUtlFPTDuXa+zCFpT6RsNr >> /home/gervaisdeM/.ssh/authorized_keys && \
+                chown -R gervaisdeM:gervaisdeM /home/gervaisdeM/.ssh
+            '30':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Luke Taylor' lutaylor && \
+                mkdir /home/lutaylor/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRtDmbcLYxjXqRbo/9e0BEv2muCkSyh9kF9xNQNYhQ8YpQdpubODPBA8C0psQIMPH+0sDu6dLr4cdcCxvZFh9RaTGVXP1Z+xLMvh+x1uYSjcXSPevLMS0ffaaOSCJvsZAzUlvklRDOEhxhI3Gs25qTmWHRepFja/6Aazf+/ksmYxR7EoMrHcBgeA6NVhF5hD+ww8jTfYS2yr1+Lyg6B2lPKY+erxnA0FlY8atRP4wmAV88VeWSdIHT+upx97W427EK3VJgyL4p3kZWMdzFpzBz5s/DB9jw/lzIPjOvbwKMR3ptVdulCKZL6+bHflwPP+unetq1Xs0NM8ZD00VfSW/L > /home/lutaylor/.ssh/authorized_keys && \
+                chown -R lutaylor:lutaylor /home/lutaylor/.ssh
+            '40':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Jeļena Ļevšina' ziono4ka && \
+                mkdir /home/ziono4ka/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDE8uJuO4CL7vVW9b33RMMfl0K7YBPD3xrOpmziCYki1cxSd98oAjn39ahEYpJlcWKjezuLBXY8U+1w9Jd6CiZV4/C2E9tMnIKr1qt9ayOuKL+K6bIckQyoSPKhg0bT1zSpOXAROjqo9YFVz9MQp3px0+p0QedxMoXsumnmqSjHcl8tf/O8nQCHJqPWrW0G358jxdBonNlhURLNrnqJY+i6jgM7ObRp+iB4twwkJji7Oyy9zPfpvckejJt8ryc7NLfuu9LTerHua0H6mmG+yDpR7c7F4AQI665sd7UqUYjrkCkHUzKhXwEVCFLGduT4PRMpEIlkIpth7syDX2StovIXF477QheloK594CkLv74J46h334FWcFYW5o7xzPdmI9o3qc15Ek4l8So3VyB18zYYTr5+HrGx+HkqO0ot4mtJcOC7AM0leYw7+ZyvRZ1bcfYPpxAygUuSuuYoCxdvvxtQDasknPVzUzvdT3jAVEcgPYkWvBluVnUSj/mJeYHIBFsNCoT5xBRq14ECTZ8W6vzY6WOQCpAptN9JMQP+9+jZXBxM2RbmM8WE70qE8II/IwEfSKNP/BAOUftde5EZ0KAswSBIZmHlU1Huo3bidUR84ZdzqOwHp9W0pmLGeHSuU5pGMtSGb2C832r4AGDMV+lWF5XghqpeUyTWgDQT3EpJWQ== > /home/ziono4ka/.ssh/authorized_keys && \
+                chown -R ziono4ka:ziono4ka /home/ziono4ka/.ssh
+            '50':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Nelson Hart' nhart && \
+                mkdir /home/nhart/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAoZz6bJTSyX09oFgVU0Dv4bGTXaGzsX0QsZGNMD+jsUi+72m6jFquitkUAGhXBvzKYaX4Za0MT2Om2V9+E4MNWVug39TmDm3f8wPa+VH3paSpM3D8WY+MGnw8mvsi1pDwe71GHZFJmJe4ECS1yFH4KukyLawzdEyJ7tPs7cpE9ssomQHopLJbpUbO/USJ1dQBG+NXlLfqd9RjqHrgDyeUHAR9It5uerBD050AE1N+XiwUVyv/gU6a4sp/JL7Kegbp7Yx+RnMudQ1aKH8yLxs5DEjTurV+KvZxvFhJi9iHrMTQ6FkRRmGbMIWURMjUjLLqRl50bmfaWMpeFWbK9LmraQ== > /home/nhart/.ssh/authorized_keys && \
+                chown -R nhart:nhart /home/nhart/.ssh
+    Properties:
+      KeyName: !Ref Key
+      ImageId: !Ref AMI
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # amd64
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+          # arm64
+          # wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+          dpkg -i /tmp/amazon-cloudwatch-agent.deb && rm /tmp/amazon-cloudwatch-agent.deb
+          apt -y install python-setuptools
+          python /usr/lib/python2.7/dist-packages/easy_install.py https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          /usr/local/bin/cfn-init --region ${AWS::Region} --stack ${AWS::StackName} --resource Instance -c default
+          # FIX-LADD: change to -e $? when done testing
+          /usr/local/bin/cfn-signal --region ${AWS::Region} --stack ${AWS::StackName} --resource Instance -e 0
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1 # Amazon Linux 2 uses /dev/xvda
+          Ebs: 
+            VolumeSize: !Ref Size
+            VolumeType: gp2
+      InstanceType: !Ref Type
+      IamInstanceProfile: !Ref InstanceProfile
+      NetworkInterfaces: 
+        - DeviceIndex: 0
+          NetworkInterfaceId: !Ref InstanceNetworkInterface
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT10M
+
+  InstanceEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId:
+        Fn::ImportValue: !Sub ${EIPStackName}-islandora-eipalloc
+      NetworkInterfaceId: !Ref InstanceNetworkInterface
+
+# Security Groups
+
+  SecurityGroup: 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${AWS::StackName}
+      GroupDescription: HTTP, HTTPS, and SSH Access
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - CidrIp:
+            Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet1CIDR
+          IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+        - CidrIp: 24.222.57.34/32
+          Description: DGI
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+      VpcId:
+        Fn::ImportValue: !Sub ${VPCStackName}-VPC
+
+# Outputs:
+
+  # Instance:
+  #   Description: Public IP
+  #   Value: !GetAtt Instance.PublicIp
+  #   # Export:
+  #   #   Name: !Sub ${AWS::StackName}-SecurityGroup

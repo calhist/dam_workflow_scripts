@@ -1,0 +1,160 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Configure IAM
+
+Resources: 
+
+# Groups
+
+  administratorsGroup: 
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: administrators
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  SystemAdministratorsGroup: 
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: system-administrators
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/job-function/SystemAdministrator
+
+# Users
+
+  al:
+    Type: AWS::IAM::User
+    Properties: 
+      UserName: al
+      Groups:
+        - !Ref administratorsGroup
+
+  jaime:
+    Type: AWS::IAM::User
+    Properties: 
+      UserName: jaime
+      Groups:
+        - !Ref administratorsGroup
+
+  TTladd:
+    Type: AWS::IAM::User
+    Properties: 
+      UserName: tt-ladd
+      ManagedPolicyArns:
+        - !Ref manageSecurityCredentialsPolicy
+      Groups:
+        - !Ref administratorsGroup
+
+# Roles
+
+  # administratorRole: 
+  #   Type: AWS::IAM::Role
+  #   Properties: 
+  #     RoleName: administrator
+  #     AssumeRolePolicyDocument: 
+  #       Version: 2012-10-17
+  #       Statement: 
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS: !Sub ${AWS::AccountId}
+  #           Action: sts:AssumeRole
+  #           Condition: 
+  #             Bool: 
+  #               aws:MultiFactorAuthPresent: true
+  #     ManagedPolicyArns: 
+  #        - arn:aws:iam::aws:policy/AdministratorAccess
+
+# Managed Policies
+
+  # assumeAdministratorManagedPolicy:
+  #   Type: AWS::IAM::ManagedPolicy
+  #   Properties: 
+  #     ManagedPolicyName: AssumeAdministratorRole
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement: 
+  #         - Effect: Allow
+  #           Action: sts:AssumeRole
+  #           Resource: !GetAtt administratorRole.Arn
+
+  manageSecurityCredentialsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties: 
+      ManagedPolicyName: ManageSecurityCredentialsPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowListAccounts
+            Effect: Allow
+            Action:
+              - iam:GenerateServiceLastAccessedDetails
+              - iam:GetAccessKeyLastUsed
+              - iam:GetAccountSummary
+              - iam:GetGroup
+              - iam:GetLoginProfile
+              - iam:GetPolicyVersion
+              - iam:GetUser
+              - iam:GetServiceLastAccessedDetails
+              - iam:ListAccessKeys
+              - iam:ListAccountAliases
+              - iam:ListAttachedGroupPolicies
+              - iam:ListAttachedRolePolicies
+              - iam:ListAttachedUserPolicies
+              - iam:ListEntitiesForPolicy
+              - iam:ListGroupPolicies
+              - iam:ListGroups
+              - iam:ListGroupsForUser
+              - iam:ListMFADevices
+              - iam:ListOpenIDConnectProviders
+              - iam:ListPolicies
+              - iam:ListPoliciesGrantingServiceAccess
+              - iam:ListPolicyVersions
+              - iam:ListRolePolicies
+              - iam:ListRoles
+              - iam:ListSAMLProviders
+              - iam:ListServiceSpecificCredentials
+              - iam:ListSigningCertificates
+              - iam:ListSSHPublicKeys
+              - iam:ListUserPolicies
+              - iam:ListUsers
+              - iam:ListVirtualMFADevices
+            Resource: "*"
+          - Sid: AllowManageOwnAccount
+            Effect: Allow
+            Action:
+              - iam:ChangePassword
+              # Access Key
+              - iam:CreateAccessKey
+              - iam:DeleteAccessKey
+              - iam:UpdateAccessKey
+              # Login Profile
+              - iam:CreateLoginProfile
+              - iam:DeleteLoginProfile
+              - iam:UpdateLoginProfile
+              # Signing Certificate
+              - iam:UploadSigningCertificate
+              - iam:DeleteSigningCertificate
+              - iam:UpdateSigningCertificate
+              # SSH Public Key
+              - iam:UploadSSHPublicKey
+              - iam:DeleteSSHPublicKey
+              - iam:UpdateSSHPublicKey
+            Resource:
+              - !Join [ "", [ "arn:aws:iam::", !Ref "AWS::AccountId", ":user/${aws:username}" ]]
+          - Sid: AllowManageOwnMFA
+            Effect: Allow
+            Action:
+              - iam:CreateVirtualMFADevice
+              - iam:DeactivateMFADevice
+              - iam:DeleteVirtualMFADevice
+              - iam:EnableMFADevice
+              - iam:ResyncMFADevice
+            Resource:
+              - !Join [ "", [ "arn:aws:iam::", !Ref "AWS::AccountId", ":mfa/${aws:username}" ]]
+              - !Join [ "", [ "arn:aws:iam::", !Ref "AWS::AccountId", ":user/${aws:username}" ]]
+
+Outputs:
+
+  URL:
+    Value: !Sub https://signin.aws.amazon.com/switchrole?account=${AWS::AccountId}&roleName=administrator&displayName=Administrator

@@ -1,0 +1,23 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Elastic IPs
+
+Resources:
+
+  Islandora:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+Outputs:
+
+  IslandoraIp:
+    Value: !Ref Islandora
+    Export:
+      Name: !Sub ${AWS::StackName}-islandora
+
+  IslandoraEipalloc:
+    Value: !GetAtt Islandora.AllocationId
+    Export:
+      Name: !Sub ${AWS::StackName}-islandora-eipalloc

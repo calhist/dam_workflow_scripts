@@ -1,0 +1,53 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: CloudTrail Service
+
+Resources: 
+
+  trail: 
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      IsMultiRegionTrail: true
+      S3BucketName: !Ref bucket
+    DependsOn: bucketPolicy
+
+  bucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: !Sub ${AWS::AccountId}-cloudtrail
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: aws/s3
+    DeletionPolicy: Retain
+
+  bucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: !Ref bucket
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !Sub arn:aws:s3:::${bucket}
+          - Effect: Allow
+            Principal: 
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${bucket}/AWSLogs/${AWS::AccountId}/*
+            Condition: 
+              StringEquals: 
+                s3:x-amz-acl: bucket-owner-full-control
+
+Outputs:
+  CloudTrailBucket:
+    Description: CloudTrail Bucket
+    Value: !Ref bucket
