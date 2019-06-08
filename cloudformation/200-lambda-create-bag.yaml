@@ -1,0 +1,94 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Common Lambda functions
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Parent Stacks
+        Parameters:
+          - VPCStackName
+          - S3StackName
+    ParameterLabels:
+      VPCStackName:
+        default: Network Layer
+      S3StackName:
+        default: S3 Buckets
+
+Parameters:
+
+  VPCStackName:
+    Type: String
+    MinLength: 3
+    MaxLength: 32
+    AllowedPattern: (^vpc$|^[a-zA-Z][a-zA-Z0-9-]*-vpc$)
+    ConstraintDescription: Please enter a valid VPC stack name
+    Default: vpc
+
+  S3StackName:
+    Type: String
+    MinLength: 2
+    MaxLength: 32
+    AllowedPattern: (^s3$|^[a-zA-Z][a-zA-Z0-9-]*-s3$)
+    ConstraintDescription: Please enter a valid S3 stack name
+    Default: s3
+
+Resources:
+
+# Lambda Functions
+
+  CreateBagFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}
+      Handler: function.handler # source /var/task/function.sh
+      Role: !GetAtt CreateBagExecutionRole.Arn
+      Code:
+        S3Bucket:
+          Fn::ImportValue: !Sub ${S3StackName}-uploads
+        S3Key: create-bag.zip
+      Runtime: provided
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:bash-runtime:2
+      Timeout: 10
+    Metadata:
+      Cost: $0.20/1M Requests
+
+  CreateBagExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+              - Effect: Allow
+                Action:
+                  - ec2:StartInstances
+                Resource: '*'
+
+  # CreateBagLogGroup:
+    # Type: AWS::Logs::LogGroup
+    # Properties:
+    #   LogGroupName: !Sub /aws/lambda/${AWS::StackName}
+    #   RetentionInDays: 3
