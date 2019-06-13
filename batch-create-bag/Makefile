@@ -6,13 +6,7 @@ SECRET_KEY := $(shell aws --profile ${PROFILE} configure get aws_secret_access_k
 TAG        := create-bag
 
 setup:
-	aws s3 cp /tmp/Squirrel.jpg s3://${ACCOUNT_ID}-artifacts/PC_006/PC_006_01.jpg
-#	aws s3 cp /tmp/MODS.xml     s3://${ACCOUNT_ID}-artifacts/PC_006.MODS/PC_006_01.xml
-
-# Retrieve the login command to use to authenticate your Docker client to your registry.
-login:
-#	$(aws --profile default ecr get-login --no-include-email --region ${REGION})
-	echo aws --profile default ecr get-login --no-include-email --region ${REGION}
+	aws s3 cp ~/github.com/calhist/test/Squirrels s3://${ACCOUNT_ID}-artifacts/Squirrels --recursive
 
 build:
 	docker build -t ${TAG} .
@@ -24,8 +18,8 @@ test:
 		-e AWS_DEFAULT_REGION=${REGION} \
 		create-bag -i s3://${ACCOUNT_ID}-artifacts/PC_006/PC_006_01.jpg
 
+#	$(aws --profile default ecr get-login --no-include-email --region ${REGION})
+
 push:
 	docker tag create-bag:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
 	docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
-
-.PHONY: login
