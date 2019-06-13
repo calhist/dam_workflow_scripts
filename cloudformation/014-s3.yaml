@@ -12,15 +12,18 @@ Metadata:
         Parameters:
           - UploadsName
           - CertificatesName
-          - StagingName
+          - InputName
+          - OutputName
           - ArchiveName
     ParameterLabels:
       UploadsName:
         default: Uploads Bucket Name
       CertificatesName:
         default: Server Certificates Name
-      StagingName:
-        default: Staging Bucket Name
+      InputName:
+        default: Input Bucket Name
+      OutputName:
+        default: Output Bucket Name
       ArchiveName:
         default: Archive Bucket Name
 
@@ -32,7 +35,10 @@ Parameters:
   CertificatesName:
     Type: String
 
-  StagingName:
+  InputName:
+    Type: String
+
+  OutputName:
     Type: String
 
   ArchiveName:
@@ -41,7 +47,8 @@ Parameters:
 Conditions:
   UseUploadsName: !Equals [ !Ref UploadsName, '' ]
   UseCertificatesName: !Equals [ !Ref CertificatesName, '' ]
-  UseStagingName: !Equals [ !Ref StagingName, '' ]
+  UseInputName: !Equals [ !Ref InputName, '' ]
+  UseOutputName: !Equals [ !Ref OutputName, '' ]
   UseArchiveName: !Equals [ !Ref ArchiveName, '' ]
 
 Resources:
@@ -74,14 +81,28 @@ Resources:
               SSEAlgorithm: AES256
     DeletionPolicy: Retain
 
-  StagingBucket: 
+  InputBucket: 
     Type: AWS::S3::Bucket
     Properties: 
       BucketName:
         !If 
-          - UseStagingName
-          - !Sub ${AWS::AccountId}-staging
-          - !Sub ${AWS::AccountId}-${StagingName}
+          - UseInputName
+          - !Sub ${AWS::AccountId}-input
+          - !Sub ${AWS::AccountId}-${InputName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+    DeletionPolicy: Retain
+
+  OutputBucket: 
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName:
+        !If 
+          - UseOutputName
+          - !Sub ${AWS::AccountId}-output
+          - !Sub ${AWS::AccountId}-${OutputName}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -115,10 +136,15 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-certificates
 
-  StagingBucket:
-    Value: !Ref StagingBucket
+  InputBucket:
+    Value: !Ref InputBucket
     Export:
-      Name: !Sub ${AWS::StackName}-staging
+      Name: !Sub ${AWS::StackName}-input
+
+  OutputBucket:
+    Value: !Ref OutputBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-output
 
   ArchiveBucket:
     Value: !Ref ArchiveBucket
