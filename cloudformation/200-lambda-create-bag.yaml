@@ -43,16 +43,21 @@ Resources:
   CreateBagFunction:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${AWS::StackName}
-      Handler: function.handler # source /var/task/function.sh
+      FunctionName: !Sub ${AWS::StackName}-create-bag
+      Handler: index.handler
       Role: !GetAtt CreateBagExecutionRole.Arn
       Code:
-        S3Bucket:
-          Fn::ImportValue: !Sub ${S3StackName}-uploads
-        S3Key: create-bag.zip
-      Runtime: provided
-      Layers:
-        - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:bash-runtime:2
+        ZipFile: |
+          import json
+          print('Loading function')
+          def lambda_handler(event, context):
+            #print("Received event: " + json.dumps(event, indent=2))
+            print("value1 = " + event['key1'])
+            print("value2 = " + event['key2'])
+            print("value3 = " + event['key3'])
+            return event['key1']  # Echo back the first key value
+            #raise Exception('Something went wrong')
+      Runtime: python3.7
       Timeout: 10
     Metadata:
       Cost: $0.20/1M Requests
@@ -84,8 +89,18 @@ Resources:
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
               - Effect: Allow
                 Action:
-                  - ec2:StartInstances
-                Resource: '*'
+                  - s3:*
+                Resource:
+                  !Join
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Fn::ImportValue: !Sub ${S3StackName}-artifacts
+                      - '/*'
+              - Effect: Allow
+                Action:
+                  - batch:*
+                Resource:
+                  '*'
 
   # CreateBagLogGroup:
     # Type: AWS::Logs::LogGroup

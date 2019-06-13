@@ -86,7 +86,7 @@ Resources:
         InstanceTypes:
           - optimal
         InstanceRole: !Ref InstanceProfile
-        MaxvCpus: 16
+        MaxvCpus: 4
         MinvCpus: 0
         SecurityGroupIds:
           - !Ref SecurityGroup
