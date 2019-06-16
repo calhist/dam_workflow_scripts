@@ -38,7 +38,7 @@ which bagit.py   >/dev/null 2>&1 || echo_exit "bagit.py not found"
 which fits.sh    >/dev/null 2>&1 || echo_exit "fits.sh not found"
 which xmlstarlet >/dev/null 2>&1 || echo_exit "xmlstarlet not found"
 
-if [[ "${input}" =~ ^s3://(.+)/(.+)/((.+)\.(.+))$ ]]; then
+if [[ "${input}" =~ ^s3://([0-9]+-input)/(.+)/((.+)\.(.+))$ ]]; then
   src_url=${BASH_REMATCH[0]}
   src_bucket=${BASH_REMATCH[1]}
   src_prefix=${BASH_REMATCH[2]}
@@ -49,7 +49,7 @@ else
   echo_exit "${input} must be a S3 URL"
 fi
 
-dst_bucket=${src_bucket}
+dst_bucket=${src_bucket/-input/-output}
 dst_prefix=${src_prefix}.bags
 dst_bag=${src_base}
 dst_object=${src_object}
