@@ -18,7 +18,9 @@ test:
 		-e AWS_DEFAULT_REGION=${REGION} \
 		create-bag -i s3://${ACCOUNT_ID}-input/Squirrels/Squirrel.jpg
 
-#	$(aws --profile default ecr get-login --no-include-email --region ${REGION})
+login:
+	@echo Logging in ...
+	$$(aws --profile ${PROFILE} ecr get-login --no-include-email --region ${REGION})
 
 push:
 	docker tag create-bag:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest

@@ -103,12 +103,22 @@ Resources:
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
               - Effect: Allow
                 Action:
-                  - s3:*
+                  - s3:Get*
+                  - s3:List*
                 Resource:
                   !Join
                     - ''
                     - - 'arn:aws:s3:::'
-                      - Fn::ImportValue: !Sub ${S3StackName}-artifacts
+                      - Fn::ImportValue: !Sub ${S3StackName}-input
+                      - '/*'
+              - Effect: Allow
+                Action:
+                  - s3:Put*
+                Resource:
+                  !Join
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Fn::ImportValue: !Sub ${S3StackName}-output
                       - '/*'
               - Effect: Allow
                 Action:
