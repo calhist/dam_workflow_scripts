@@ -1,4 +1,4 @@
-PROFILE    := default
+PROFILE    := ladd
 ACCOUNT_ID := $(shell aws --profile ${PROFILE} configure get account_id)
 REGION     := $(shell aws --profile ${PROFILE} configure get region)
 KEY_ID     := $(shell aws --profile ${PROFILE} configure get aws_access_key_id)
@@ -6,7 +6,7 @@ SECRET_KEY := $(shell aws --profile ${PROFILE} configure get aws_secret_access_k
 TAG        := create-bag
 
 setup:
-	aws s3 cp ~/github.com/calhist/test/Squirrels s3://${ACCOUNT_ID}-artifacts/Squirrels --recursive
+	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/Squirrels s3://${ACCOUNT_ID}-input/Squirrels --recursive
 
 build:
 	docker build -t ${TAG} .
@@ -16,10 +16,19 @@ test:
 		-e AWS_ACCESS_KEY_ID=${KEY_ID} \
 		-e AWS_SECRET_ACCESS_KEY=${SECRET_KEY} \
 		-e AWS_DEFAULT_REGION=${REGION} \
-		create-bag -i s3://${ACCOUNT_ID}-artifacts/PC_006/PC_006_01.jpg
+		create-bag -i s3://${ACCOUNT_ID}-input/Squirrels/Squirrel.jpg
 
-#	$(aws --profile default ecr get-login --no-include-email --region ${REGION})
+login:
+	@echo Logging in ...
+	$$(aws --profile ${PROFILE} ecr get-login --no-include-email --region ${REGION})
 
 push:
 	docker tag create-bag:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
 	docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
+
+job:
+	aws --profile ${PROFILE} batch submit-job \
+		--job-name TEST \
+		--job-queue batch \
+		--job-definition batch-create-bag \
+		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/Squirrels/Squirrel.jpg"
