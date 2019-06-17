@@ -25,3 +25,9 @@ login:
 push:
 	docker tag create-bag:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
 	docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${TAG}:latest
+
+job:
+	aws --profile ${PROFILE} batch submit-job \
+		--job-name TEST \
+		--job-queue batch \
+		--job-definition batch-create-bag
