@@ -58,14 +58,14 @@ dst_object=${src_object}
 
 mkdir $dst_bag
 
-aws s3 cp $src_url ${dst_bag}/${dst_object} --no-progress || echo_exit "aws failed"
+aws s3 cp $src_url ${dst_bag}/${dst_object} --no-progress || echo_exit "src cp failed"
 
 fits.sh -xc -i ${dst_bag} -o $dst_bag || echo_exit "fits.sh failed"
 
 aws s3api head-object --bucket ${src_bucket} --key ${src_prefix}.MODS/${src_base}.xml >/dev/null 2>&1
 
 if [ $? -eq 0 ]; then
-  aws s3 cp s3://${src_bucket}/${src_prefix}.MODS/${src_base}.xml ${dst_bag}/MODS.xml --no-progress
+  aws s3 cp s3://${src_bucket}/${src_prefix}.MODS/${src_base}.xml ${dst_bag}/MODS.xml --no-progress || echo_exit "mods cp failed"
 
 	xmlstarlet val -w ${dst_bag}/MODS.xml
 
@@ -77,4 +77,4 @@ fi
 
 bagit.py --processes 3 --md5 --sha256 --sha512 $dst_bag || echo_exit "bagit.py failed"
 
-aws s3 sync $dst_bag s3://${dst_bucket}/${dst_prefix}/${dst_bag} --no-progress || echo_exit "aws failed"
+aws s3 sync $dst_bag s3://${dst_bucket}/${dst_prefix}/${dst_bag} --no-progress || echo_exit "dst sync failed"

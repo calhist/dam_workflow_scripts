@@ -30,4 +30,5 @@ job:
 	aws --profile ${PROFILE} batch submit-job \
 		--job-name TEST \
 		--job-queue batch \
-		--job-definition batch-create-bag
+		--job-definition batch-create-bag \
+		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/Squirrels/Squirrel.jpg"

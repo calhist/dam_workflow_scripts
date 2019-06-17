@@ -182,7 +182,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Policies:
-        - PolicyName: root
+        - PolicyName: AllowS3
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -195,16 +195,19 @@ Resources:
                     - ''
                     - - 'arn:aws:s3:::'
                       - Fn::ImportValue: !Sub ${S3StackName}-input
-                      - '/*'
+#                      - '/*'
               - Effect: Allow
                 Action:
+                  - s3:Get*
+                  - s3:List*
+                  - s3:Delete*
                   - s3:Put*
                 Resource:
                   !Join
                     - ''
                     - - 'arn:aws:s3:::'
                       - Fn::ImportValue: !Sub ${S3StackName}-output
-                      - '/*'
+#                      - '/*'
 
 # Security Groups
 
