@@ -92,8 +92,8 @@ Resources:
           - !Ref SecurityGroup
         SpotIamFleetRole: !Sub arn:aws:iam::${AWS::AccountId}:role/AmazonEC2SpotFleetRole
         Subnets:
-          - Fn::ImportValue: !Sub ${VPCStackName}-public-subnet1
-          - Fn::ImportValue: !Sub ${VPCStackName}-public-subnet2
+          - Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet1
+          - Fn::ImportValue: !Sub ${VPCStackName}-PublicSubnet2
         Tags: { "Name": "batch" }
         Type: SPOT
       ServiceRole: !Sub arn:aws:iam::${AWS::AccountId}:role/service-role/AWSBatchServiceRole
@@ -155,7 +155,7 @@ Resources:
         #   ToPort: 22
         #   CidrIp: 128.83.0.0/16
       VpcId:
-        Fn::ImportValue: !Sub ${VPCStackName}-vpc
+        Fn::ImportValue: !Sub ${VPCStackName}-VPC
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}
