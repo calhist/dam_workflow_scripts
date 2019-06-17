@@ -113,7 +113,6 @@ Resources:
 
 # Roles
 
-  # Amazon EC2 Spot Fleet Role
   SpotFleetRole:
     Type: AWS::IAM::Role
     Properties:
