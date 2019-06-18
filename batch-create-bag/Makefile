@@ -6,7 +6,8 @@ SECRET_KEY := $(shell aws --profile ${PROFILE} configure get aws_secret_access_k
 TAG        := create-bag
 
 COLLECTION := Squirrels
-ASSET      := Squirrel.jpg
+ASSET      := Squirrel01.jpg
+MODS       := Squirrel01.xml
 
 # COLLECTION := DAG-9G_01
 # ASSET      := DAG-9G_01_recto.tif
@@ -14,7 +15,7 @@ ASSET      := Squirrel.jpg
 setup:
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${COLLECTION} --recursive
-#	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}.MODS s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive
+	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}.MODS s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive
 	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}      s3://${ACCOUNT_ID}-input/${COLLECTION}      --recursive
 
 build:
@@ -26,6 +27,13 @@ test:
 		-e AWS_SECRET_ACCESS_KEY=${SECRET_KEY} \
 		-e AWS_DEFAULT_REGION=${REGION} \
 		create-bag -i s3://${ACCOUNT_ID}-input/${COLLECTION}/${ASSET}
+
+test-mods:
+	docker run --rm -it \
+		-e AWS_ACCESS_KEY_ID=${KEY_ID} \
+		-e AWS_SECRET_ACCESS_KEY=${SECRET_KEY} \
+		-e AWS_DEFAULT_REGION=${REGION} \
+		create-bag -i s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS/${MODS}
 
 login:
 	@echo Logging in ...
