@@ -188,8 +188,13 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - s3:GetObject*
+                  - s3:Get*
+                  - s3:List*
                 Resource:
+                  - !Join
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${S3StackName}-input
                   - !Join
                       - ''
                       - - 'arn:aws:s3:::'

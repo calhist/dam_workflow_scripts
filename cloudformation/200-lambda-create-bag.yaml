@@ -79,7 +79,6 @@ Resources:
   CreateBagExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      Path: /
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -101,25 +100,6 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
-              - Effect: Allow
-                Action:
-                  - s3:Get*
-                  - s3:List*
-                Resource:
-                  !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Fn::ImportValue: !Sub ${S3StackName}-input
-                      - '/*'
-              - Effect: Allow
-                Action:
-                  - s3:Put*
-                Resource:
-                  !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Fn::ImportValue: !Sub ${S3StackName}-output
-                      - '/*'
               - Effect: Allow
                 Action:
                   - batch:*
