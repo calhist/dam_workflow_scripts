@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Description: Batch
 
-# aws --profile <profile> 
+# aws --profile <profile>
 #   iam create-role --role-name AmazonEC2SpotFleetRole \
 #     --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"spotfleet.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
 #   iam attach-role-policy \
@@ -188,14 +188,13 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - s3:Get*
-                  - s3:List*
+                  - s3:GetObject*
                 Resource:
-                  !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Fn::ImportValue: !Sub ${S3StackName}-input
-#                      - '/*'
+                  - !Join
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${S3StackName}-input
+                        - '/*'
               - Effect: Allow
                 Action:
                   - s3:Get*
@@ -203,11 +202,15 @@ Resources:
                   - s3:Delete*
                   - s3:Put*
                 Resource:
-                  !Join
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Fn::ImportValue: !Sub ${S3StackName}-output
-#                      - '/*'
+                  - !Join
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${S3StackName}-output
+                  - !Join
+                      - ''
+                      - - 'arn:aws:s3:::'
+                        - Fn::ImportValue: !Sub ${S3StackName}-output
+                        - '/*'
 
 # Security Groups
 
