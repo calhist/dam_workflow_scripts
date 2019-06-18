@@ -50,19 +50,29 @@ Resources:
         ZipFile: |
           import json
           import boto3
+          import re
           client = boto3.client('batch')
           job_queue = 'batch'
           job_definition = 'batch-create-bag'
           def handler(event, context):
             # print('record = ' + json.dumps(record, indent=2))
-            bucket = event['Records'][0]['s3']['bucket']['name']
-            object = event['Records'][0]['s3']['object']['key']
-            asset = "s3://{}/{}".format(bucket, object)
-            if '.bags/' in object:
-              return 'ignore'
+            s3 = event['Records'][0]['s3']
+            asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
+            m = re.match('^s3://([0-9]+-input)/(.+)/((.+)\.(.+))$', asset)
+            if m:
+              url = m.group(0)
+              bucket = m.group(1)
+              prefix = m.group(2)
+              object = m.group(3)
+              base = m.group(4)
+              ext = m.group(5)
+              print("{} => {} {} {}".format(url, bucket, prefix, object))
+            else:
+              raise Exception('Invalid S3 URL')
+            job_name = "{}-{}".format(prefix.replace('.','-'), object.replace('.','-'))
             try:
               response = client.submit_job(
-                jobName='TEST',
+                jobName=job_name,
                 jobQueue=job_queue,
                 jobDefinition=job_definition,
                 containerOverrides={'command': ['-i', asset]}

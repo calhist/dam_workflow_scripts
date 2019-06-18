@@ -12,7 +12,7 @@ ASSET      := Squirrel.jpg
 # ASSET      := DAG-9G_01_recto.tif
 
 setup:
-	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}.MODS s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive
+#	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}.MODS s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive
 	aws --profile ${PROFILE} s3 cp ~/github.com/calhist/test/${COLLECTION}      s3://${ACCOUNT_ID}-input/${COLLECTION}      --recursive
 
 build:
