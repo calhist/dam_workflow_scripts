@@ -38,9 +38,7 @@ which bagit.py   >/dev/null 2>&1 || echo_exit "bagit.py not found"
 which fits.sh    >/dev/null 2>&1 || echo_exit "fits.sh not found"
 which xmlstarlet >/dev/null 2>&1 || echo_exit "xmlstarlet not found"
 
-# if [[ "${input}" =~ ^s3://([0-9]+-input)/(.+)/((.+)\.(.+))$ ]]; then
 if [[ "${input}" =~ ^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$ ]]; then
-#                         1              23    4        56   7
   src_url=${BASH_REMATCH[0]}
   src_bucket=${BASH_REMATCH[1]}
   src_prefix=${BASH_REMATCH[2]}
@@ -87,4 +85,3 @@ done
 
 bagit.py --processes 3 --md5 --sha256 --sha512 $dst_bag || echo_exit "bagit.py failed"
 aws s3 sync $dst_bag s3://${dst_bucket}/${dst_prefix}/${dst_bag} --no-progress || echo_exit "dst sync failed"
-
