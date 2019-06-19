@@ -74,7 +74,7 @@ if [ $? -eq 0 ]; then
 fi
 
 # ASSETS
-for i in jpg tif; do
+for i in jpg tif mp3 mov wav; do
 	aws s3api head-object --bucket ${src_bucket} --key ${src_prefix_base}/${src_object_base}.$i >/dev/null 2>&1
 
 	if [ $? -eq 0 ]; then
@@ -82,6 +82,8 @@ for i in jpg tif; do
 		fits.sh -xc -i ${dst_bag}/${src_object_base}.$i -o $dst_bag/${src_object_base}.$i.fits.xml || echo_exit "fits.sh failed"
 	fi
 done
+
+[ -z "$(ls -A ${dst_bag})" ] && echo_exit "empty bag"
 
 bagit.py --processes 3 --md5 --sha256 --sha512 $dst_bag || echo_exit "bagit.py failed"
 aws s3 sync $dst_bag s3://${dst_bucket}/${dst_prefix}/${dst_bag} --no-progress || echo_exit "dst sync failed"

@@ -11,6 +11,7 @@ MODS       := Squirrel01.xml
 
 # COLLECTION := DAG-9G_01
 # ASSET      := DAG-9G_01_recto.tif
+# MODS       := DAG-9G_01_recto.xml
 
 setup:
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${COLLECTION}.MODS --recursive

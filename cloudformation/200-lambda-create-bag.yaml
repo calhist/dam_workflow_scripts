@@ -58,16 +58,24 @@ Resources:
             # print('record = ' + json.dumps(record, indent=2))
             s3 = event['Records'][0]['s3']
             asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
-            m = re.match('^s3://([0-9]+-input)/(.+)/((.+)\.(.+))$', asset)
+            #       BUCKET               PREFIX           OBJECT
+            # s3:// 516318261102-input / Squirrels      / Squirrel.jpg
+            # s3:// 516318261102-input / Squirrels.MODS / Squirrel.xml
+            m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
             if m:
               url = m.group(0)
               bucket = m.group(1)
               prefix = m.group(2)
-              object = m.group(3)
-              base = m.group(4)
-              ext = m.group(5)
-              print("{} => {} {} {}".format(url, bucket, prefix, object))
+              prefix_base = m.group(3)
+              prefix_ext  = m.group(4)
+              object = m.group(5)
+              object_base = m.group(6)
+              object_ext = m.group(7)
+              print("{}: {} {} {}".format(url, bucket, prefix, object))
+              print("{}: {} {}".format(prefix, prefix_base, prefix_ext))
+              print("{}: {} {}".format(object, object_base, object_ext))
             else:
+              print('Invalid S3 URL.')
               raise Exception('Invalid S3 URL')
             job_name = "{}-{}".format(prefix.replace('.','-'), object.replace('.','-'))
             try:

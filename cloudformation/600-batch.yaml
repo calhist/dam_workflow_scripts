@@ -73,7 +73,7 @@ Resources:
       RetryStrategy:
           Attempts: 2 # Spot instance might fail
       Timeout:
-          AttemptDurationSeconds: 120 # 2 minutes
+          AttemptDurationSeconds: 300 # 5 minutes
       Type: container
 
   JobQueue:
@@ -234,3 +234,58 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}
+
+# Notifications
+
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: !Sub ${AWS::StackName}-job-failed-alert
+      # KmsMasterKeyId: String
+      Subscription:
+        - Protocol: email
+          Endpoint: ladd.hanson@gmail.com
+      # TopicName: !Sub ${AWS::StackName}-job-failed-alert
+
+# Events
+
+  JobFailedRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      # Description: String
+      EventPattern: |
+        {
+          "detail-type": [
+            "Batch Job State Change"
+          ],
+          "source": [
+            "aws.batch"
+          ],
+          "detail": {
+            "status": [
+              "FAILED"
+            ]
+          }
+        }
+      # Name: String
+      # RoleArn: String
+      # ScheduleExpression: String
+      State: DISABLED
+      Targets: 
+        - Arn: !Ref Topic
+          # EcsParameters: 
+          #   EcsParameters
+          Id: !Sub ${AWS::StackName}-target
+          # Input: String
+          # InputPath: String
+          # InputTransformer: 
+          #   InputTransformer
+          # KinesisParameters: 
+          #   KinesisParameters
+          # RoleArn: String
+          # RunCommandParameters: 
+          #   RunCommandParameters
+          # SqsParameters: 
+          #   SqsParameters
+
+
