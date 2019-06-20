@@ -95,3 +95,17 @@ job2: clean init-mods build push # MODS ONLY
 		--job-queue batch \
 		--job-definition batch-create-bag \
 		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/${PREFIX}/${OBJECT}"
+
+job3: clean init init-mods build push # ASSET AND MODS
+	aws --profile ${PROFILE} batch submit-job \
+		--job-name TEST \
+		--job-queue batch \
+		--job-definition batch-create-bag \
+		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/${PREFIX}/${OBJECT}"
+
+job4: clean build push # SHOULD FAIL
+	aws --profile ${PROFILE} batch submit-job \
+		--job-name TEST \
+		--job-queue batch \
+		--job-definition batch-create-bag \
+		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/${PREFIX}/${OBJECT}"
