@@ -1,0 +1,3 @@
+bd2e34bdac0d50cb2ae29ce6c826aad9f725461b511a0c0fcbcf248768188e0e  data/MODS.xml
+909e8c759f760ee45c9735274e71d66d8f112e8e14387ff2e7d4af064091afe0  data/Squirrel01.jpg
+a5e7252dec8d166b80be7e1ff5bfd5f60b1dba77e0e70dc706fe8fc188234434  data/Squirrel01.jpg.fits.xml

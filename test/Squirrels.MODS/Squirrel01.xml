@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/mods/v3/mods-3-5.xsd">
+  <titleInfo>
+    <title>Group of miners</title>
+  </titleInfo>
+  <identifier type="local">DAG-9G_01</identifier>
+  <typeOfResource>still image</typeOfResource>
+  <genre authority="gmgpc">Photographs</genre>
+  <genre authority="gmgpc">Daguerreotypes</genre>
+  <note type="general">Plate has been enclosed in a contemporary mount. Group portrait of nine miners, all men. Four men stand at back, five men sit at front. Man at front right holds a book; two men sitting at front hold mining equipment, including a shovel. Portrait was probably taken between 1849 and 1860.</note>
+  <note type="preferred citation">Group of miners, 1849-1860, DAG 9G; California Historical Society.</note>
+  <originInfo>
+    <dateCreated>circa 1850s</dateCreated>
+    <dateCreated encoding="w3cdtf" keyDate="yes" point="start" qualifier="approximate">1840</dateCreated>
+    <dateCreated encoding="w3cdtf" point="end" qualifier="approximate">1860</dateCreated>
+  </originInfo>
+  <language>
+    <languageTerm type="code" authority="iso639-2b">eng</languageTerm>
+  </language>
+  <physicalDescription>
+    <extent>1 photograph : daguerreotype in mount ; plate 15.5 x 20.5 cm. </extent>
+  </physicalDescription>
+  <accessCondition type="useAndReproduction">This item is in the public domain in the United States. Permission to publish or reproduce is not required. Upon request, digitized works can be removed from public view if there are rights issues that need to be resolved.</accessCondition>
+  <accessCondition type="rightsStatement" xlink:href="http://rightsstatements.org/vocab/NKC/1.0/">No Known Copyright</accessCondition>
+  <subject authority="lcsh">
+    <topic>Gold mines and mining</topic>
+  </subject>
+  <subject authority="lcsh">
+    <topic>Miners Group portraits</topic>
+  </subject>
+  <subject authority="lcsh">
+    <geographic>California</geographic>
+  </subject>
+  <relatedItem type="host">
+    <titleInfo>
+      <title>null</title>
+    </titleInfo>
+    <identifier type="local">DAG 9G</identifier>
+    <location>
+      <physicalLocation>California Historical Society</physicalLocation>
+      <url>https://oac.cdlib.org/findaid/ark:/13030/c81g0svc/</url>
+    </location>
+  </relatedItem>
+</mods>

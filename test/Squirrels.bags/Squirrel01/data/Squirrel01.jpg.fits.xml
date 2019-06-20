@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fits xmlns="http://hul.harvard.edu/ois/xml/ns/fits/fits_output" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://hul.harvard.edu/ois/xml/ns/fits/fits_output http://hul.harvard.edu/ois/xml/xsd/fits/fits_output.xsd" version="1.1.1" timestamp="6/19/19 5:45 PM">
+  <identification status="CONFLICT">
+    <identity format="JPEG File Interchange Format" mimetype="image/jpeg" toolname="FITS" toolversion="1.1.1">
+      <tool toolname="Droid" toolversion="6.1.5" />
+      <tool toolname="file utility" toolversion="5.32" />
+      <version toolname="Droid" toolversion="6.1.5">1.01</version>
+      <externalIdentifier toolname="Droid" toolversion="6.1.5" type="puid">fmt/43</externalIdentifier>
+    </identity>
+    <identity format="JPEG EXIF" mimetype="image/jpeg" toolname="FITS" toolversion="1.1.1">
+      <tool toolname="Exiftool" toolversion="10.00" />
+      <tool toolname="NLNZ Metadata Extractor" toolversion="3.6GA" />
+      <version toolname="Exiftool" toolversion="10.00">1.01</version>
+    </identity>
+  </identification>
+  <fileinfo>
+    <size toolname="Jhove" toolversion="1.16">233724</size>
+    <creatingApplicationName toolname="Exiftool" toolversion="10.00" status="CONFLICT">Canon EOS 5D Mark III</creatingApplicationName>
+    <creatingApplicationName toolname="NLNZ Metadata Extractor" toolversion="3.6GA" status="CONFLICT">Aperture 3.4.1</creatingApplicationName>
+    <lastmodified toolname="Exiftool" toolversion="10.00" status="SINGLE_RESULT">2012:09:29 20:31:36</lastmodified>
+    <created toolname="Exiftool" toolversion="10.00">2012:09:29 20:31:36</created>
+    <filepath toolname="OIS File Information" toolversion="0.2" status="SINGLE_RESULT">/data/Collections.TODO/Squirrels.bags/Squirrel01/Squirrel01.jpg</filepath>
+    <filename toolname="OIS File Information" toolversion="0.2" status="SINGLE_RESULT">Squirrel01.jpg</filename>
+    <md5checksum toolname="OIS File Information" toolversion="0.2" status="SINGLE_RESULT">0f43fa5a262c476393018f7329080fa7</md5checksum>
+    <fslastmodified toolname="OIS File Information" toolversion="0.2" status="SINGLE_RESULT">1560991542000</fslastmodified>
+  </fileinfo>
+  <filestatus />
+  <metadata />
+  <statistics fitsExecutionTime="888">
+    <tool toolname="MediaInfo" toolversion="0.7.75" status="did not run" />
+    <tool toolname="OIS Audio Information" toolversion="0.1" status="did not run" />
+    <tool toolname="ADL Tool" toolversion="0.1" status="did not run" />
+    <tool toolname="VTT Tool" toolversion="0.1" status="did not run" />
+    <tool toolname="Droid" toolversion="6.1.5" executionTime="183" />
+    <tool toolname="Jhove" toolversion="1.16" executionTime="813" />
+    <tool toolname="file utility" toolversion="5.32" executionTime="752" />
+    <tool toolname="Exiftool" toolversion="10.00" executionTime="836" />
+    <tool toolname="NLNZ Metadata Extractor" toolversion="3.6GA" executionTime="756" />
+    <tool toolname="OIS File Information" toolversion="0.2" executionTime="158" />
+    <tool toolname="OIS XML Metadata" toolversion="0.2" status="did not run" />
+    <tool toolname="ffident" toolversion="0.2" executionTime="623" />
+  </statistics>
+</fits>
+
