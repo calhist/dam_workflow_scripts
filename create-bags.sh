@@ -101,7 +101,7 @@ fi
 # $ xmlstarlet --version
 #
 
-xml=/usr/bin/xmlstarlet
+xml=/usr/local/bin/xmlstarlet
 
 if [ ! -x ${xml} ]; then
 	echo "${xml}: not found."

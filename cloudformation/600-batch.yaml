@@ -22,13 +22,19 @@ Metadata:
           - VPCStackName
           - S3StackName
           - ECRStackName
+      - Label:
+          default: Batch Parameters
+        Parameters:
+          - NotificationEmail
     ParameterLabels:
       VPCStackName:
         default: Network Layer
       S3StackName:
         default: S3 Layer
-      ECrStackName:
+      ECRStackName:
         default: Container Repository Layer
+      NotificationEmail:
+        default: Notification Email
 
 Parameters:
 
@@ -55,6 +61,13 @@ Parameters:
     AllowedPattern: (^ecr$|^[a-zA-Z][a-zA-Z0-9-]*-ecr$)
     ConstraintDescription: Please enter a valid ECR stack name
     Default: ecr
+
+  NotificationEmail:
+    Type: String
+    MinLength: 12
+    AllowedPattern: (^.+@.+$)
+    ConstraintDescription: Please enter a valid email address
+    Default: ladd.hanson@gmail.com
 
 Resources:
 
@@ -244,7 +257,7 @@ Resources:
       # KmsMasterKeyId: String
       Subscription:
         - Protocol: email
-          Endpoint: ladd.hanson@gmail.com
+          Endpoint: !Ref NotificationEmail
       # TopicName: !Sub ${AWS::StackName}-job-failed-alert
 
 # Events
@@ -270,7 +283,7 @@ Resources:
       # Name: String
       # RoleArn: String
       # ScheduleExpression: String
-      State: DISABLED
+      State: ENABLED
       Targets: 
         - Arn: !Ref Topic
           # EcsParameters: 
