@@ -7,6 +7,96 @@ Resources:
 
 # Lambda Functions
 
+  CreateBagFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-create-bag
+      Handler: index.handler
+      Role: !GetAtt CreateBagExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import re
+          client = boto3.client('batch')
+          job_queue = 'batch'
+          job_definition = 'batch-create-bag'
+          def handler(event, context):
+            # print('record = ' + json.dumps(record, indent=2))
+            s3 = event['Records'][0]['s3']
+            asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
+            #       BUCKET               PREFIX           OBJECT
+            # s3:// 516318261102-input / Squirrels      / Squirrel.jpg
+            # s3:// 516318261102-input / Squirrels.MODS / Squirrel.xml
+            m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
+            if m:
+              url = m.group(0)
+              bucket = m.group(1)
+              prefix = m.group(2)
+              prefix_base = m.group(3)
+              prefix_ext  = m.group(4)
+              object = m.group(5)
+              object_base = m.group(6)
+              object_ext = m.group(7)
+              print("{}: {} {} {}".format(url, bucket, prefix, object))
+              print("{}: {} {}".format(prefix, prefix_base, prefix_ext))
+              print("{}: {} {}".format(object, object_base, object_ext))
+            else:
+              print('Invalid S3 URL.')
+              raise Exception('Invalid S3 URL')
+            job_name = "{}-{}".format(prefix.replace('.','-'), object.replace('.','-'))
+            try:
+              response = client.submit_job(
+                jobName=job_name,
+                jobQueue=job_queue,
+                jobDefinition=job_definition,
+                containerOverrides={'command': ['-i', asset]}
+              )
+            except ClientError as e:
+              print(e)
+              raise Exception('Something went wrong')
+            return 'Success'
+      Runtime: python3.7
+      Timeout: 10
+    Metadata:
+      Cost: $0.20/1M Requests
+
+  CreateBagExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+              - Effect: Allow
+                Action:
+                  - batch:*
+                Resource:
+                  '*'
+
+  CreateBagLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-create-bag
+      RetentionInDays: 3
+
   StartInstanceFunction: 
     Type: AWS::Lambda::Function
     Properties: 

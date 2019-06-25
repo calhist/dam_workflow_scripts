@@ -5,6 +5,9 @@ KEY_ID     := $(shell aws --profile ${PROFILE} configure get aws_access_key_id)
 SECRET_KEY := $(shell aws --profile ${PROFILE} configure get aws_secret_access_key)
 TAG        := create-bag
 
+CREATE := arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:lambda-create-bag
+REMOVE := arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:lambda-remove-bag
+
 PREFIX      := Squirrels
 OBJECT      := Squirrel01.jpg
 OBJECT_BASE := Squirrel01
@@ -16,11 +19,27 @@ MODS        := Squirrel01.xml
 # MODS       := DAG-9G_01_recto.xml
 
 clean:
+	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input --notification-configuration '{}'
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-output/${PREFIX}.bags --recursive
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
 	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
 
 init:
+	@echo '{'                                        > /tmp/json
+	@echo '  "LambdaFunctionConfigurations": ['     >> /tmp/json
+	@echo '    {'                                   >> /tmp/json
+	@echo '      "Id": "create-trigger",'           >> /tmp/json
+	@echo '      "LambdaFunctionArn": "${CREATE}",' >> /tmp/json
+	@echo '      "Events": ["s3:ObjectCreated:*"]'  >> /tmp/json
+#	@echo '    },'                                  >> /tmp/json
+#	@echo '    {'                                   >> /tmp/json
+#	@echo '      "Id": "remove-trigger",'           >> /tmp/json
+#	@echo '      "LambdaFunctionArn": "${REMOVE}",' >> /tmp/json
+#	@echo '      "Events": ["s3:ObjectCreated:*"]'  >> /tmp/json
+	@echo '    }'                                   >> /tmp/json
+	@echo '  ]'                                     >> /tmp/json
+	@echo '}'                                       >> /tmp/json
+	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input --notification-configuration file:///tmp/json
 	aws --profile ${PROFILE} s3 cp test/${PREFIX} s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
 
 init-mods:
@@ -109,3 +128,4 @@ job4: clean build push # SHOULD FAIL
 		--job-queue batch \
 		--job-definition batch-create-bag \
 		--container-overrides command="-i","s3://${ACCOUNT_ID}-input/${PREFIX}/${OBJECT}"
+
