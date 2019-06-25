@@ -108,44 +108,60 @@ Resources:
           import json
           import boto3
           import re
-          client = boto3.client('batch')
-          job_queue = 'batch'
-          job_definition = 'batch-create-bag'
+          client = boto3.client('s3')
           def handler(event, context):
-            # print('record = ' + json.dumps(record, indent=2))
-            s3 = event['Records'][0]['s3']
-            asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
-            #       BUCKET               PREFIX           OBJECT
-            # s3:// 516318261102-input / Squirrels      / Squirrel.jpg
-            # s3:// 516318261102-input / Squirrels.MODS / Squirrel.xml
-            m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
-            if m:
-              url = m.group(0)
-              bucket = m.group(1)
-              prefix = m.group(2)
-              prefix_base = m.group(3)
-              prefix_ext  = m.group(4)
-              object = m.group(5)
-              object_base = m.group(6)
-              object_ext = m.group(7)
-              print("{}: {} {} {}".format(url, bucket, prefix, object))
-              print("{}: {} {}".format(prefix, prefix_base, prefix_ext))
-              print("{}: {} {}".format(object, object_base, object_ext))
+            # print('EVENT: ' + json.dumps(event, indent=2))
+            if 'Records' in event:
+              records = event['Records']
+              for record in records:
+                # print('RECORD: ' + json.dumps(record, indent=2))
+                if 'eventName' in record and record['eventName'] == 'ObjectRemoved:Delete':
+                  s3 = record['s3']
+                  # print('S3: ' + json.dumps(s3, indent=2))
+                  asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
+                  #       BUCKET               PREFIX           OBJECT
+                  # s3:// 516318261102-input / Squirrels      / Squirrel01.jpg
+                  # s3:// 516318261102-input / Squirrels.MODS / Squirrel01.xml
+                  m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
+                  if m:
+                    src_url = m.group(0)
+                    src_bucket = m.group(1)
+                    src_prefix = m.group(2)
+                    src_prefix_base = m.group(3)
+                    src_prefix_ext  = m.group(4)
+                    src_object = m.group(5)
+                    src_object_base = m.group(6)
+                    src_object_ext = m.group(7)
+                    print("{}: {} {} {}".format(src_url, src_bucket, src_prefix, src_object))
+                    print("{}: {} {}".format(src_prefix, src_prefix_base, src_prefix_ext))
+                    print("{}: {} {}".format(src_object, src_object_base, src_object_ext))
+                    dst_bucket = src_bucket.replace('-input', '-output')
+                    dst_prefix = src_prefix + '.bags'
+                    dst_bag = src_object_base
+                    dst_key = "{}/{}".format(dst_prefix, dst_bag)
+                    print("{} {}".format(dst_bucket, dst_key))
+                    response = client.delete_object(
+                      Bucket=dst_bucket,
+                      Key=dst_key
+                    )
+                    # try:
+                    #   response = client.delete_object(
+                    #     Bucket=dst_bucket,
+                    #     Key=dst_key
+                    #   )
+                    # except ClientError as e:
+                    #   print(e)
+                    #   raise Exception('Something went wrong')
+                    print('RESPONSE: ' + response)
+                    return 'Success'
+                  else:
+                    print('Invalid S3 URL.')
+                    raise Exception('Invalid S3 URL')
+                else:
+                  return 'Unknown eventName: ' + record['eventName']
             else:
-              print('Invalid S3 URL.')
-              raise Exception('Invalid S3 URL')
-            job_name = "{}-{}".format(prefix.replace('.','-'), object.replace('.','-'))
-            try:
-              response = client.submit_job(
-                jobName=job_name,
-                jobQueue=job_queue,
-                jobDefinition=job_definition,
-                containerOverrides={'command': ['-i', asset]}
-              )
-            except ClientError as e:
-              print(e)
-              raise Exception('Something went wrong')
-            return 'Success'
+              return 'Ignore event'
+            raise Exception('Something went wrong')
       Runtime: python3.7
       Timeout: 10
     Metadata:
@@ -162,7 +178,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: root
+        - PolicyName: AllowS3
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -178,8 +194,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:*
-                Resource:
-                  arn:aws:s3:::${AWS::AccountId}-output
+                Resource: !Sub arn:aws:s3:::${AWS::AccountId}-output/*
 
   RemoveBagLogGroup:
     Type: AWS::Logs::LogGroup

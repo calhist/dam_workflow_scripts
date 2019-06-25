@@ -19,11 +19,11 @@ MODS        := Squirrel01.xml
 # MODS       := DAG-9G_01_recto.xml
 
 clean:
-#	aws --profile ${PROFILE} s3api get-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input
+	aws --profile ${PROFILE} s3api get-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input
 	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input --notification-configuration '{}'
-	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-output/${PREFIX}.bags --recursive
-	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
-	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
+#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-output/${PREFIX}.bags --recursive
+#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
+#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
 
 init:
 	@echo '{'                                        > /tmp/json
@@ -32,11 +32,11 @@ init:
 	@echo '      "Id": "create-trigger",'           >> /tmp/json
 	@echo '      "LambdaFunctionArn": "${CREATE}",' >> /tmp/json
 	@echo '      "Events": ["s3:ObjectCreated:*"]'  >> /tmp/json
-#	@echo '    },'                                  >> /tmp/json
-#	@echo '    {'                                   >> /tmp/json
-#	@echo '      "Id": "remove-trigger",'           >> /tmp/json
-#	@echo '      "LambdaFunctionArn": "${REMOVE}",' >> /tmp/json
-#	@echo '      "Events": ["s3:ObjectCreated:*"]'  >> /tmp/json
+	@echo '    },'                                  >> /tmp/json
+	@echo '    {'                                   >> /tmp/json
+	@echo '      "Id": "remove-trigger",'           >> /tmp/json
+	@echo '      "LambdaFunctionArn": "${REMOVE}",' >> /tmp/json
+	@echo '      "Events": ["s3:ObjectRemoved:*"]'  >> /tmp/json
 	@echo '    }'                                   >> /tmp/json
 	@echo '  ]'                                     >> /tmp/json
 	@echo '}'                                       >> /tmp/json
