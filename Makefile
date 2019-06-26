@@ -21,8 +21,7 @@ MODS        := Squirrel01.xml
 get-triggers:
 	aws --profile ${PROFILE} s3api get-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input
 
-# FAILS SOMETIMES (??)
-set-triggers:
+set-triggers: # FAILS SOMETIMES (??)
 	@echo '{'                                        > /tmp/json
 	@echo '  "LambdaFunctionConfigurations": ['     >> /tmp/json
 	@echo '    {'                                   >> /tmp/json
