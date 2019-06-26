@@ -3,7 +3,7 @@
 USAGE="Usage: $(basename $0) -c <collection> [-f] [-n]"
 
 cleanup () {
-	[ -d ${output} ] && rm -r $output
+	[ ! -z ${output} ] && [ -d ${output} ] && rm -r $output
 }
 
 trap 'cleanup' EXIT HUP INT QUIT TERM
