@@ -1,19 +1,30 @@
 #!/bin/bash
 
-USAGE="Usage: $(basename $0) -c <collection> [-f]"
+USAGE="Usage: $(basename $0) -c <collection> [-f] [-n]"
+
+cleanup () {
+	[ -d ${output} ] && rm -r $output
+}
+
+trap 'cleanup' EXIT HUP INT QUIT TERM
 
 source=704869648062-output
 input=
 output=
+archive=704869648062-archive
 force=0
+dryrun=0
 
-while getopts "c:f" opt; do
+while getopts "c:fn" opt; do
 	case $opt in
 	c)
 		input=$OPTARG
 		;;
 	f)
 		force=1
+		;;
+	n)
+		dryrun=1
 		;;
  	\?)
 		echo ${USAGE}
@@ -71,3 +82,23 @@ for i in $(ls $output); do
  		exit 1
 	fi
 done
+
+echo
+echo Ready to save to ${output} to ${archive}/${output}
+echo
+
+printf "Proceed with sync ? (y or n): "
+read ln
+
+if [ ${ln} != 'y' ]; then
+	echo
+	exit 1
+fi
+
+echo
+
+if [ $dryrun -eq 1 ]; then
+	aws s3 sync ${output} s3://${archive}/${output} --dryrun
+else
+	aws s3 sync ${output} s3://${archive}/${output}
+fi
