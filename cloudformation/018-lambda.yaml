@@ -107,60 +107,47 @@ Resources:
         ZipFile: |
           import json
           import boto3
+          import logging
           import re
-          client = boto3.client('s3')
+          s3 = boto3.resource('s3')
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
           def handler(event, context):
             # print('EVENT: ' + json.dumps(event, indent=2))
-            if 'Records' in event:
-              records = event['Records']
-              for record in records:
-                # print('RECORD: ' + json.dumps(record, indent=2))
-                if 'eventName' in record and record['eventName'] == 'ObjectRemoved:Delete':
-                  s3 = record['s3']
-                  # print('S3: ' + json.dumps(s3, indent=2))
-                  asset = "s3://{}/{}".format(s3['bucket']['name'], s3['object']['key'])
-                  #       BUCKET               PREFIX           OBJECT
-                  # s3:// 516318261102-input / Squirrels      / Squirrel01.jpg
-                  # s3:// 516318261102-input / Squirrels.MODS / Squirrel01.xml
-                  m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
-                  if m:
-                    src_url = m.group(0)
-                    src_bucket = m.group(1)
-                    src_prefix = m.group(2)
-                    src_prefix_base = m.group(3)
-                    src_prefix_ext  = m.group(4)
-                    src_object = m.group(5)
-                    src_object_base = m.group(6)
-                    src_object_ext = m.group(7)
-                    print("{}: {} {} {}".format(src_url, src_bucket, src_prefix, src_object))
-                    print("{}: {} {}".format(src_prefix, src_prefix_base, src_prefix_ext))
-                    print("{}: {} {}".format(src_object, src_object_base, src_object_ext))
-                    dst_bucket = src_bucket.replace('-input', '-output')
-                    dst_prefix = src_prefix + '.bags'
-                    dst_bag = src_object_base
-                    dst_key = "{}/{}".format(dst_prefix, dst_bag)
-                    print("{} {}".format(dst_bucket, dst_key))
-                    response = client.delete_object(
-                      Bucket=dst_bucket,
-                      Key=dst_key
-                    )
-                    # try:
-                    #   response = client.delete_object(
-                    #     Bucket=dst_bucket,
-                    #     Key=dst_key
-                    #   )
-                    # except ClientError as e:
-                    #   print(e)
-                    #   raise Exception('Something went wrong')
-                    print('RESPONSE: ' + response)
-                    return 'Success'
-                  else:
-                    print('Invalid S3 URL.')
-                    raise Exception('Invalid S3 URL')
-                else:
-                  return 'Unknown eventName: ' + record['eventName']
-            else:
+            if 'Records' not in event:
               return 'Ignore event'
+            for record in event['Records']:
+              if 'eventName' not in record:
+                continue
+              if record['eventName'] == 'ObjectRemoved:Delete':
+                bucket = record['s3']['bucket']['name']
+                key = record['s3']['object']['key']
+                asset = "s3://{}/{}".format(bucket, key)
+                #       BUCKET               PREFIX           OBJECT
+                # s3:// 516318261102-input / Squirrels      / Squirrel01.jpg
+                # s3:// 516318261102-input / Squirrels.MODS / Squirrel01.xml
+                m = re.match('^s3://([0-9]+-input)/(([^./]+)(\..+)?)/((.+)(\..+))$', asset)
+                if m:
+                  src_url = m.group(0)
+                  src_bucket = m.group(1)
+                  src_prefix = m.group(2)
+                  src_prefix_base = m.group(3)
+                  src_prefix_ext  = m.group(4)
+                  src_object = m.group(5)
+                  src_object_base = m.group(6)
+                  src_object_ext = m.group(7)
+                  logger.info(src_url)
+                  dst_bucket = src_bucket.replace('-input', '-output')
+                  dst_bag = '{}.bags/{}'.format(src_prefix_base, src_object_base)
+                  bucket = s3.Bucket(dst_bucket)
+                  for obj in bucket.objects.filter(Prefix=dst_bag):
+                    s3.Object(bucket.name, obj.key).delete()
+                  return 'Success'
+                else:
+                  print('Invalid S3 URL.')
+                  raise Exception('Invalid S3 URL')
+              else:
+                return 'Unknown eventName: ' + record['eventName']
             raise Exception('Something went wrong')
       Runtime: python3.7
       Timeout: 10
@@ -178,7 +165,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: AllowS3
+        - PolicyName: RemoveBags
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -191,9 +178,14 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
+              - Effect: ListBucket
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub arn:aws:s3:::${AWS::AccountId}-output
               - Effect: Allow
                 Action:
-                  - s3:*
+                  - s3:DeleteObject
+                  - s3:ListObjects
                 Resource: !Sub arn:aws:s3:::${AWS::AccountId}-output/*
 
   RemoveBagLogGroup:

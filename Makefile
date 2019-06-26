@@ -18,14 +18,11 @@ MODS        := Squirrel01.xml
 # ASSET      := DAG-9G_01_recto.tif
 # MODS       := DAG-9G_01_recto.xml
 
-clean:
+get-triggers:
 	aws --profile ${PROFILE} s3api get-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input
-	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input --notification-configuration '{}'
-#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-output/${PREFIX}.bags --recursive
-#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
-#	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
 
-init:
+# FAILS SOMETIMES (??)
+set-triggers:
 	@echo '{'                                        > /tmp/json
 	@echo '  "LambdaFunctionConfigurations": ['     >> /tmp/json
 	@echo '    {'                                   >> /tmp/json
@@ -40,8 +37,17 @@ init:
 	@echo '    }'                                   >> /tmp/json
 	@echo '  ]'                                     >> /tmp/json
 	@echo '}'                                       >> /tmp/json
-	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input --notification-configuration file:///tmp/json
-	aws --profile ${PROFILE} s3 cp test/${PREFIX} s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
+	aws --profile ${PROFILE} s3api put-bucket-notification-configuration --bucket ${ACCOUNT_ID}-input \
+		--notification-configuration file:///tmp/json
+
+clean:
+	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-output/${PREFIX}.bags --recursive
+	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX} --recursive
+	aws --profile ${PROFILE} s3 rm s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
+
+init:
+	aws --profile ${PROFILE} s3 cp test/${PREFIX}      s3://${ACCOUNT_ID}-input/${PREFIX}      --recursive
+	aws --profile ${PROFILE} s3 cp test/${PREFIX}.MODS s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
 
 init-mods:
 	aws --profile ${PROFILE} s3 cp test/${PREFIX}.MODS s3://${ACCOUNT_ID}-input/${PREFIX}.MODS --recursive
