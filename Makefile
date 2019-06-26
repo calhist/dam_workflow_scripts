@@ -1,4 +1,4 @@
-PROFILE    := ladd
+PROFILE    := calhist
 ACCOUNT_ID := $(shell aws --profile ${PROFILE} configure get account_id)
 REGION     := $(shell aws --profile ${PROFILE} configure get region)
 KEY_ID     := $(shell aws --profile ${PROFILE} configure get aws_access_key_id)
