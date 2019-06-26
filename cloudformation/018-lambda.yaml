@@ -178,7 +178,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*
-              - Effect: ListBucket
+              - Effect: Allow
                 Action:
                   - s3:ListBucket
                 Resource: !Sub arn:aws:s3:::${AWS::AccountId}-output
