@@ -11,22 +11,12 @@ Resources:
 
 # Container
 
-  FetchAndRun:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: fetch-and-run
-
   CreateBag:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: create-bag
 
 Outputs:
-
-  FetchAndRun:
-    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${FetchAndRun}
-    Export:
-      Name: !Sub ${AWS::StackName}-fetch-and-run
 
   CreateBag:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${CreateBag}
