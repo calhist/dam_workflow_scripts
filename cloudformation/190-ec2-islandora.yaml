@@ -89,15 +89,15 @@ Parameters:
   # t3.xlarge 4 Variable  16 GiB  EBS Only  $0.1664 per Hour
   # m5.xlarge 4 16        16 GiB  EBS Only  $0.192 per Hour
 
-  Type: 
+  Type:
     Type: String
     Default: m5.large # Komodo: 4 CPU, 16GB memory
 
-  Size: 
+  Size:
     Type: String
     Default: 200
 
-  Key: 
+  Key:
     Description: Used for SSH access
     Type: AWS::EC2::KeyPair::KeyName
 
@@ -136,33 +136,33 @@ Resources:
 
 # Instance
 
-  InstanceRole: 
+  InstanceRole:
     Type: AWS::IAM::Role
-    Properties: 
+    Properties:
       RoleName: !Sub ${AWS::StackName}
-      AssumeRolePolicyDocument: 
+      AssumeRolePolicyDocument:
         Version: 2012-10-17
-        Statement: 
+        Statement:
           - Effect: Allow
-            Principal: 
-              Service: 
+            Principal:
+              Service:
                 - ec2.amazonaws.com
-            Action: 
+            Action:
               - sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
 
-  InstanceProfile: 
+  InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       InstanceProfileName: !Sub ${AWS::StackName}
-      Roles: 
+      Roles:
         - !Ref InstanceRole
 
   InstanceNetworkInterface:
     Type: AWS::EC2::NetworkInterface
-    Properties: 
+    Properties:
       GroupSet:
         - !Ref SecurityGroup
       SubnetId:
@@ -174,10 +174,10 @@ Resources:
   Instance:
     Type: AWS::EC2::Instance
     DependsOn: MountTarget
-    Metadata: 
-      AWS::CloudFormation::Init: 
-        configSets: 
-          default: 
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
             - Common
             - Ubuntu18
             - Postfix
@@ -394,6 +394,12 @@ Resources:
                 mkdir /home/ziono4ka/.ssh && \
                 echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDE8uJuO4CL7vVW9b33RMMfl0K7YBPD3xrOpmziCYki1cxSd98oAjn39ahEYpJlcWKjezuLBXY8U+1w9Jd6CiZV4/C2E9tMnIKr1qt9ayOuKL+K6bIckQyoSPKhg0bT1zSpOXAROjqo9YFVz9MQp3px0+p0QedxMoXsumnmqSjHcl8tf/O8nQCHJqPWrW0G358jxdBonNlhURLNrnqJY+i6jgM7ObRp+iB4twwkJji7Oyy9zPfpvckejJt8ryc7NLfuu9LTerHua0H6mmG+yDpR7c7F4AQI665sd7UqUYjrkCkHUzKhXwEVCFLGduT4PRMpEIlkIpth7syDX2StovIXF477QheloK594CkLv74J46h334FWcFYW5o7xzPdmI9o3qc15Ek4l8So3VyB18zYYTr5+HrGx+HkqO0ot4mtJcOC7AM0leYw7+ZyvRZ1bcfYPpxAygUuSuuYoCxdvvxtQDasknPVzUzvdT3jAVEcgPYkWvBluVnUSj/mJeYHIBFsNCoT5xBRq14ECTZ8W6vzY6WOQCpAptN9JMQP+9+jZXBxM2RbmM8WE70qE8II/IwEfSKNP/BAOUftde5EZ0KAswSBIZmHlU1Huo3bidUR84ZdzqOwHp9W0pmLGeHSuU5pGMtSGb2C832r4AGDMV+lWF5XghqpeUyTWgDQT3EpJWQ== > /home/ziono4ka/.ssh/authorized_keys && \
                 chown -R ziono4ka:ziono4ka /home/ziono4ka/.ssh
+            '41':
+              command: |
+                useradd -m -s /bin/bash -G sudo -c 'Jeļena Ļevšina' jlevsina && \
+                mkdir /home/jlevsina/.ssh && \
+                echo ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDE8uJuO4CL7vVW9b33RMMfl0K7YBPD3xrOpmziCYki1cxSd98oAjn39ahEYpJlcWKjezuLBXY8U+1w9Jd6CiZV4/C2E9tMnIKr1qt9ayOuKL+K6bIckQyoSPKhg0bT1zSpOXAROjqo9YFVz9MQp3px0+p0QedxMoXsumnmqSjHcl8tf/O8nQCHJqPWrW0G358jxdBonNlhURLNrnqJY+i6jgM7ObRp+iB4twwkJji7Oyy9zPfpvckejJt8ryc7NLfuu9LTerHua0H6mmG+yDpR7c7F4AQI665sd7UqUYjrkCkHUzKhXwEVCFLGduT4PRMpEIlkIpth7syDX2StovIXF477QheloK594CkLv74J46h334FWcFYW5o7xzPdmI9o3qc15Ek4l8So3VyB18zYYTr5+HrGx+HkqO0ot4mtJcOC7AM0leYw7+ZyvRZ1bcfYPpxAygUuSuuYoCxdvvxtQDasknPVzUzvdT3jAVEcgPYkWvBluVnUSj/mJeYHIBFsNCoT5xBRq14ECTZ8W6vzY6WOQCpAptN9JMQP+9+jZXBxM2RbmM8WE70qE8II/IwEfSKNP/BAOUftde5EZ0KAswSBIZmHlU1Huo3bidUR84ZdzqOwHp9W0pmLGeHSuU5pGMtSGb2C832r4AGDMV+lWF5XghqpeUyTWgDQT3EpJWQ== > /home/jlevsina/.ssh/authorized_keys && \
+                chown -R jlevsina:jlevsina /home/jlevsina/.ssh
             '50':
               command: |
                 useradd -m -s /bin/bash -G sudo -c 'Nelson Hart' nhart && \
@@ -418,12 +424,12 @@ Resources:
           /usr/local/bin/cfn-signal --region ${AWS::Region} --stack ${AWS::StackName} --resource Instance -e 0
       BlockDeviceMappings:
         - DeviceName: /dev/sda1 # Amazon Linux 2 uses /dev/xvda
-          Ebs: 
+          Ebs:
             VolumeSize: !Ref Size
             VolumeType: gp2
       InstanceType: !Ref Type
       IamInstanceProfile: !Ref InstanceProfile
-      NetworkInterfaces: 
+      NetworkInterfaces:
         - DeviceIndex: 0
           NetworkInterfaceId: !Ref InstanceNetworkInterface
       Tags:
@@ -443,7 +449,7 @@ Resources:
 
 # Security Groups
 
-  SecurityGroup: 
+  SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub ${AWS::StackName}
