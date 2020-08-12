@@ -12,7 +12,7 @@ cleanup () {
   [ -f /tmp/${output}   ] && rm /tmp/${output}
 }
 
-trap 'cleanup' EXIT HUP INT QUIT TERM
+#trap 'cleanup' EXIT HUP INT QUIT TERM
 
 input=
 output=TEI.xml
@@ -34,6 +34,7 @@ done
 
 which tesseract  >/dev/null 2>&1 || echo_exit "tesseract not found"
 which xmlstarlet >/dev/null 2>&1 || echo_exit "xmlstarlet not found"
+which uni2ascii  >/dev/null 2>&1 || echo_exit "uni2ascii not found"
 
 if [ "${input}" == '' ]; then
   echo ${USAGE}
@@ -65,11 +66,13 @@ echo "    </sourceDesc>"               >> $template
 echo "  </fileDesc>"                   >> $template
 echo "</teiHeader>"                    >> $template
 
-if [ -f $output ]; then
+echo OUTPUT $output
+
+if [ -f $input/$output ]; then
   if [ $force -eq 1 ]; then
-    rm -f $output
+    rm -f $input/$output
   else
-    echo_exit "${output} file already exits"
+    echo_exit "${input}/${output} file already exits"
   fi
 fi
 
@@ -95,14 +98,21 @@ for i in $(find $input/*/OBJ.tif -type f); do
     echo_exit "${input} must be a TIF image"
   fi
 
+  echo INFO tesseract $i /tmp/$base
   tesseract $i /tmp/$base
+
+  echo INFO uni2ascii /tmp/${base}.txt
+  uni2ascii -B /tmp/${base}.txt > /tmp/${base}.ascii.txt
 
   while read p; do
     if [ "$p" != '' ]; then
-      p=$(echo $p | sed 's/&/\&amp;/g;  s/</\&lt;/g; s/>/\&gt;/g')
+      p=$(echo $p | sed 's/</ /g; s/>/ /g;')
+      p=$(echo $p | sed 's/ & / and /g;')
+      #p=$(echo $p | sed 's/“/"/g') # curly quote to straight quote
+      #p=$(echo $p | sed 's/”/"/g') # curly quote to straight quote
       printf '<p>%s</p>\n' "$p" >> /tmp/$output
     fi
-  done < /tmp/${base}.txt
+  done < /tmp/${base}.ascii.txt
 done
 
 printf '    </body>\n'                               >> /tmp/$output
@@ -111,7 +121,4 @@ printf '</TEI>\n'                                    >> /tmp/$output
 
 xmlstarlet val -e -w /tmp/${output} || echo_exit "xmlstarlet failed"
 
-# xmlstarlet fo --omit-decl /tmp/${output} > $output
-
 xmlstarlet fo /tmp/${output} > $input/$output # converts to xml entities
-
