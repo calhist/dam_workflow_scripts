@@ -208,13 +208,13 @@ for i in $(find ${output} -maxdepth 1 -type d | egrep "${collection}_[0-9]+$"); 
 			[ -f /tmp/${base}.txt ] && rm /tmp/${base}.txt
 			while read p; do
 				if [ "$p" != '' ]; then
-					p=$(echo $p | sed 's/</ /g; s/>/ /g;')
-					p=$(echo $p | sed 's/ & / and /g;')
-					p=$(echo $p | sed 's/ &$/ and/g;')
-					p=$(echo $p | sed 's/^&$/and/g;')
-					p=$(echo $p | sed 's/&/ /g;') # probably not AND
-					#p=$(echo $p | sed 's/“/"/g') # curly quote to straight quote
-					#p=$(echo $p | sed 's/”/"/g') # curly quote to straight quote
+					p=$(echo "$p" | sed 's/</ /g; s/>/ /g;')
+					p=$(echo "$p" | sed 's/ & / and /g;')
+					p=$(echo "$p" | sed 's/ &$/ and/g;')
+					p=$(echo "$p" | sed 's/^&$/and/g;')
+					p=$(echo "$p" | sed 's/&/ /g;') # probably not AND
+					#p=$(echo "$p" | sed 's/“/"/g') # curly quote to straight quote
+					#p=$(echo "$p" | sed 's/”/"/g') # curly quote to straight quote
 					printf '<p>%s</p>\n' "$p" >> /tmp/TEI.xml
 				fi
 			done < /tmp/${base}.ascii.txt
@@ -237,4 +237,4 @@ done
 #	bagit.py --processes 3 --md5 --sha256 --sha512 $i
 #done
 
-#rm /tmp/apache-tika-*
+rm /tmp/apache-tika-*
