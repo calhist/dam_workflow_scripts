@@ -51,7 +51,7 @@ fi
 
 dir=$(cd ${input}; pwd) # convert to absolute path
 
-output=${input}.bags
+output=${input}.batch
 
 if [ -d $output ]; then
 	if [ $force -eq 1 ]; then
@@ -82,6 +82,46 @@ for i in $(find ${dir}.MODS -type f | egrep "${dir}.MODS/${collection}_[0-9]+\.x
 done
 
 # ASSETS
+
+#single page manuscript
+for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+\.tif$"); do
+	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)\.tif$ ]]; then
+		bag=${BASH_REMATCH[1]}
+		page=1
+
+		echo ${output}/$bag/$page/OBJ.tif
+
+		mkdir ${output}/$bag/$page
+		cp $i ${output}/$bag/$page/OBJ.tif
+
+		# FITS
+		fits.sh -xc -i ${output}/$bag/$page/OBJ.tif -o ${output}/$bag/$page/OBJ.tif.fits.xml
+		if [ $? -ne 0 ]; then
+			echo_exit "fits.sh failed"
+		fi
+	fi
+done
+
+# multiple page manuscript - numbered
+for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+_[0-9]+\.tif$"); do
+	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)_0*([0-9]+)\.tif$ ]]; then
+		bag=${BASH_REMATCH[1]}
+		page=${BASH_REMATCH[2]}
+
+		echo ${output}/$bag/$page/OBJ.tif
+
+		mkdir ${output}/$bag/$page
+		cp $i ${output}/$bag/$page/OBJ.tif
+
+		# FITS
+		fits.sh -xc -i ${output}/$bag/$page/OBJ.tif -o ${output}/$bag/$page/OBJ.tif.fits.xml
+		if [ $? -ne 0 ]; then
+			echo_exit "fits.sh failed"
+		fi
+	fi
+done
+
+# multiple page manuscript - A to Z
 for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+[a-z]\.tif$"); do
 	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)([a-z])\.tif$ ]]; then
 		bag=${BASH_REMATCH[1]}
@@ -168,13 +208,13 @@ for i in $(find ${output} -maxdepth 1 -type d | egrep "${collection}_[0-9]+$"); 
 			[ -f /tmp/${base}.txt ] && rm /tmp/${base}.txt
 			while read p; do
 				if [ "$p" != '' ]; then
-					p=$(echo "$p" | sed 's/</ /g; s/>/ /g;')
-					p=$(echo "$p" | sed 's/ & / and /g;')
-					p=$(echo "$p" | sed 's/ &$/ and/g;')
-					p=$(echo "$p" | sed 's/^&$/and/g;')
-					p=$(echo "$p" | sed 's/&/ /g;') # probably not AND
-					#p=$(echo "$p" | sed 's/“/"/g') # curly quote to straight quote
-					#p=$(echo "$p" | sed 's/”/"/g') # curly quote to straight quote
+					p=$(echo $p | sed 's/</ /g; s/>/ /g;')
+					p=$(echo $p | sed 's/ & / and /g;')
+					p=$(echo $p | sed 's/ &$/ and/g;')
+					p=$(echo $p | sed 's/^&$/and/g;')
+					p=$(echo $p | sed 's/&/ /g;') # probably not AND
+					#p=$(echo $p | sed 's/“/"/g') # curly quote to straight quote
+					#p=$(echo $p | sed 's/”/"/g') # curly quote to straight quote
 					printf '<p>%s</p>\n' "$p" >> /tmp/TEI.xml
 				fi
 			done < /tmp/${base}.ascii.txt
@@ -193,8 +233,8 @@ for i in $(find ${output} -maxdepth 1 -type d | egrep "${collection}_[0-9]+$"); 
 	xmlstarlet fo /tmp/TEI.xml > $i/TEI.xml # converts to xml entities
 done
 
-for i in $(find ${output} -maxdepth 1 -type d | egrep "${input}_[0-9]+$"); do
-	bagit.py --processes 3 --md5 --sha256 --sha512 $i
-done
+#for i in $(find ${output} -maxdepth 1 -type d | egrep "${input}_[0-9]+$"); do
+#	bagit.py --processes 3 --md5 --sha256 --sha512 $i
+#done
 
-rm /tmp/apache-tika-*
+#rm /tmp/apache-tika-*
