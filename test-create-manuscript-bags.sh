@@ -79,8 +79,48 @@ for i in $(find ${dir}.MODS -type f | egrep "${dir}.MODS/${input}_[0-9]+\.xml$")
 done
 
 # ASSETS
-for i in $(find $input -type f | egrep "${input}/${input}_[0-9]+[a-z]\.tif$"); do
-	if [[ $i =~ ^${input}/(${input}_[0-9]+)([a-d])\.tif$ ]]; then
+
+#single page manuscript
+for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+\.tif$"); do
+	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)\.tif$ ]]; then
+		bag=${BASH_REMATCH[1]}
+		page=1
+
+		echo ${output}/$bag/$page/OBJ.tif
+
+		mkdir ${output}/$bag/$page
+		cp $i ${output}/$bag/$page/OBJ.tif
+
+		# FITS
+		fits.sh -xc -i ${output}/$bag/$page/OBJ.tif -o ${output}/$bag/$page/OBJ.tif.fits.xml
+		if [ $? -ne 0 ]; then
+			echo_exit "fits.sh failed"
+		fi
+	fi
+done
+
+# multiple page manuscript - numbered
+for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+_[0-9]+\.tif$"); do
+	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)_0*([0-9]+)\.tif$ ]]; then
+		bag=${BASH_REMATCH[1]}
+		page=${BASH_REMATCH[2]}
+
+		echo ${output}/$bag/$page/OBJ.tif
+
+		mkdir ${output}/$bag/$page
+		cp $i ${output}/$bag/$page/OBJ.tif
+
+		# FITS
+		fits.sh -xc -i ${output}/$bag/$page/OBJ.tif -o ${output}/$bag/$page/OBJ.tif.fits.xml
+		if [ $? -ne 0 ]; then
+			echo_exit "fits.sh failed"
+		fi
+	fi
+done
+
+# multiple page manuscript - A to Z
+for i in $(find ${dir} -type f | egrep "${input}/${collection}_[0-9]+[a-z]\.tif$"); do
+	if [[ $i =~ ^$(dirname $i)/(${collection}_[0-9]+)([a-z])\.tif$ ]]; then
 		bag=${BASH_REMATCH[1]}
 		page=0
 		[ "${BASH_REMATCH[2]}" = 'a' ] && page=1
@@ -124,6 +164,7 @@ for i in $(find $input -type f | egrep "${input}/${input}_[0-9]+[a-z]\.tif$"); d
 		fi
 	fi
 done
+
 
 # TEI
 for i in $(find ${output} -maxdepth 1 -type d | egrep "${input}_[0-9]+$"); do
