@@ -190,3 +190,5 @@ done
 for i in $(find ${output} -maxdepth 1 -type d | egrep "${input}_[0-9]+$"); do
 	bagit.py --processes 3 --md5 --sha256 --sha512 $i
 done
+
+rm /tmp/apache-tika-*
